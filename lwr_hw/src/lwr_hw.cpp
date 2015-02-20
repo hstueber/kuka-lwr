@@ -301,8 +301,8 @@ namespace lwr_ros_control
           {
             for (int i = 0; i < LBR_MNJ; i++)
             {
-                newJntPosition[i] = this->device_->joint_position_command[i]; // zero for now
-		            //std::cout << "joint_effor_command " << i << " " << this->device_->joint_effort_command[i] << std::endl;
+                newJntPosition[i] = this->device_->joint_position[i]; // zero for now
+// 		        std::cout << "joint_effort_command " << i << " " << this->device_->joint_effort_command[i] << std::endl;
                 newJntAddTorque[i] = this->device_->joint_effort_command[i]; // comes from the controllers
                 newJntStiff[i] = this->device_->joint_stiffness_command[i]; // default values for now
                 newJntDamp[i] = this->device_->joint_damping_command[i]; // default values for now
@@ -312,7 +312,7 @@ namespace lwr_ros_control
             // note that stiffness and damping are 0, as well as the position, since only effort is allowed to be sent
             // the KRC adds the dynamic terms, such that if zero torque is sent, the robot apply torques necessary to mantain the robot in the current position
             // the only interface is effort, thus any other action you want to do, you have to compute the added torque and send it through a controller
-            this->device_->interface->doJntImpedanceControl(NULL, newJntStiff, newJntDamp, newJntAddTorque, true);
+            this->device_->interface->doJntImpedanceControl(newJntPosition, newJntStiff, newJntDamp, newJntAddTorque, true);
           }
         //}
           if( this->device_->interface->getCurrentControlScheme() == FRI_CTRL_OTHER ) // Gravity compensation: just read status, but we have to keep FRI alive
