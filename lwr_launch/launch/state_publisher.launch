@@ -1,3 +1,5 @@
+<!-- Requires ros_monitor.src running on the robot! -->
+
 <launch>
     <arg name="rviz" default="false" doc="Start an Rviz instance"/>
     

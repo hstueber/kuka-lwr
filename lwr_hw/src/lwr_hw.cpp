@@ -301,7 +301,7 @@ namespace lwr_ros_control
           {
             for (int i = 0; i < LBR_MNJ; i++)
             {
-                newJntPosition[i] = this->device_->joint_position[i]; // zero for now
+                newJntPosition[i] = this->device_->joint_position[i];
 // 		        std::cout << "joint_effort_command " << i << " " << this->device_->joint_effort_command[i] << std::endl;
                 newJntAddTorque[i] = this->device_->joint_effort_command[i]; // comes from the controllers
                 newJntStiff[i] = this->device_->joint_stiffness_command[i]; // default values for now
