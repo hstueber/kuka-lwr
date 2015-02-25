@@ -132,6 +132,7 @@ namespace lwr_ros_control
     // interfaces
     hardware_interface::JointStateInterface state_interface_;
     hardware_interface::EffortJointInterface effort_interface_;
+    hardware_interface::PositionJointInterface position_interface_;
 
     joint_limits_interface::EffortJointSaturationInterface   ej_sat_interface_;
     joint_limits_interface::EffortJointSoftLimitsInterface   ej_limits_interface_;
@@ -209,6 +210,13 @@ namespace lwr_ros_control
           &this->device_->joint_effort[i]);
 
       state_interface_.registerHandle(state_handle);
+      
+      // position command handle
+      hardware_interface::JointHandle position_joint_handle = hardware_interface::JointHandle(
+            state_interface_.getHandle(this->device_->joint_names[i]),
+            &this->device_->joint_position_command[i]);
+
+      position_interface_.registerHandle(position_joint_handle);
 
       // effort command handle
       hardware_interface::JointHandle joint_handle = hardware_interface::JointHandle(
@@ -230,6 +238,7 @@ namespace lwr_ros_control
     // register ros-controls interfaces
     this->registerInterface(&state_interface_);
     this->registerInterface(&effort_interface_);
+    this->registerInterface(&position_interface_);
 
     std::cout << "Opening FRI Version " 
       << FRI_MAJOR_VERSION << "." << FRI_SUB_VERSION << "." <<FRI_DATAGRAM_ID_CMD << "." <<FRI_DATAGRAM_ID_MSR 
@@ -297,6 +306,20 @@ namespace lwr_ros_control
         //if ( this->device_->interface->getState() == FRI_STATE_CMD )
         //{
           // check control scheme
+          if( this->device_->interface->getCurrentControlScheme() == FRI_CTRL_POSITION )
+          {
+            for (int i = 0; i < LBR_MNJ; i++)
+            {
+                newJntPosition[i] = this->device_->joint_position_command[i];
+            }
+
+            // only joint impedance control is performed, since it is the only one that provide access to the joint torque directly
+            // note that stiffness and damping are 0, as well as the position, since only effort is allowed to be sent
+            // the KRC adds the dynamic terms, such that if zero torque is sent, the robot apply torques necessary to mantain the robot in the current position
+            // the only interface is effort, thus any other action you want to do, you have to compute the added torque and send it through a controller
+            this->device_->interface->doPositionControl(newJntPosition, true);
+          }
+          // check control scheme
           if( this->device_->interface->getCurrentControlScheme() == FRI_CTRL_JNT_IMP )
           {
             for (int i = 0; i < LBR_MNJ; i++)
@@ -314,11 +337,11 @@ namespace lwr_ros_control
             // the only interface is effort, thus any other action you want to do, you have to compute the added torque and send it through a controller
             this->device_->interface->doJntImpedanceControl(newJntPosition, newJntStiff, newJntDamp, newJntAddTorque, true);
           }
-        //}
           if( this->device_->interface->getCurrentControlScheme() == FRI_CTRL_OTHER ) // Gravity compensation: just read status, but we have to keep FRI alive
           {
             this->device_->interface->doJntImpedanceControl(NULL, NULL, NULL, NULL, true);
           }
+        //}
       }
 
       // Stop request is issued from the other side
