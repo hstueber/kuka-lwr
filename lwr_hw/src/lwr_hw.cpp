@@ -339,7 +339,7 @@ namespace lwr_ros_control
           }
           if( this->device_->interface->getCurrentControlScheme() == FRI_CTRL_OTHER ) // Gravity compensation: just read status, but we have to keep FRI alive
           {
-            this->device_->interface->doJntImpedanceControl(NULL, NULL, NULL, NULL, true);
+              this->device_->interface->doDataExchange();
           }
         //}
       }
