@@ -60,3 +60,16 @@ lwr:
     state_publish_rate:  25            # Override default
     action_monitor_rate: 30            # Override default
     stop_trajectory_duration: 0        # Override default
+    
+    
+  position_joint_trajectory_controller:
+    type: position_controllers/JointTrajectoryController
+    joints: 
+      - lwr_0_joint
+      - lwr_1_joint
+      - lwr_2_joint
+      - lwr_3_joint
+      - lwr_4_joint
+      - lwr_5_joint
+      - lwr_6_joint
+

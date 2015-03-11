@@ -25,7 +25,7 @@
 	<rosparam file="$(find lwr_moveit)/config/lwr_controller.yaml" command="load"/>
 	
 	<node ns="lwr" name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
-		output="screen"  args="joint_state_controller joint_trajectory_controller"/> 
+		output="screen"  args="joint_state_controller position_joint_trajectory_controller"/> 
   
   <remap from="/lwr/joint_states" to="/joint_states"/>  <!--TODO: why is this needed??-->
 
