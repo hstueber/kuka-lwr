@@ -1,5 +1,7 @@
 <launch>
+    <arg name="impedance" default="false" />
 	<arg name="moveit_controller_manager" default="moveit_simple_controller_manager/MoveItSimpleControllerManager"/>
 	<param name="moveit_controller_manager" value="$(arg moveit_controller_manager)"/>
-	<rosparam file="$(find lwr_moveit)/config/controllers.yaml"/>
+	<rosparam if="$(arg impedance)" file="$(find lwr_moveit)/config/impedance_controller.yaml"/>
+    <rosparam unless="$(arg impedance)" file="$(find lwr_moveit)/config/position_controller.yaml"/>
 </launch>
