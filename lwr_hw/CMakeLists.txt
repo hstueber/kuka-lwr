@@ -62,7 +62,7 @@ add_definitions (-fpermissive)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES lwr_hw
-#  CATKIN_DEPENDS other_catkin_pkg
+  CATKIN_DEPENDS control_toolbox controller_interface controller_manager hardware_interface realtime_tools joint_limits_interface tf urdf 
 #  DEPENDS system_lib
 )
 
