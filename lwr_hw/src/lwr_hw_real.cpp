@@ -112,6 +112,8 @@ bool LWRHWreal::start()
   this->registerInterface(&effort_interface_);
   this->registerInterface(&position_interface_);
   this->registerInterface(&velocity_interface_);
+  
+  publisher.reset(new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(nh_, "joint_ext_efforts", 2));
 
   // note that the velocity interface is not registrered, since the velocity command is computed within this implementation.
 
@@ -156,6 +158,16 @@ bool LWRHWreal::read(ros::Time time, ros::Duration period)
   }
   
   //this->device_->interface->doDataExchange();
+  
+  if (publisher->trylock()) {
+      sensor_msgs::JointState blah;
+      blah.position.resize(7);
+      for (int i = 0; i < 7; i++) {
+          blah.position[i] = device_->getMsrEstExtJntTrq()[i];
+      }
+      publisher->msg_ = blah;
+      publisher->unlockAndPublish();
+  }
 
   return true;
 }

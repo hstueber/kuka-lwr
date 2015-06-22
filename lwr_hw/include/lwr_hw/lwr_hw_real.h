@@ -11,6 +11,9 @@
 #include <limits.h>
 #include "fri/friudp.h"
 #include "fri/friremote.h"
+#include <boost/scoped_ptr.hpp>
+#include <sensor_msgs/JointState.h>
+#include <realtime_tools/realtime_publisher.h>
 
 namespace lwr_hw
 { 
@@ -32,6 +35,8 @@ namespace lwr_hw
     FRI_CTRL lastCtrlScheme_;
 
   private:
+      
+    boost::scoped_ptr< realtime_tools::RealtimePublisher<sensor_msgs::JointState> > publisher;
 
     // Node handle
     ros::NodeHandle nh_;
