@@ -14,18 +14,15 @@ find_package(catkin REQUIRED COMPONENTS
   cmake_modules
 )
 
-include_directories(include ${catkin_INCLUDE_DIRS})
+include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
 
 link_directories(${catkin_LIBRARY_DIRS})
 
-include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
 add_message_files(
    FILES
    PoseRPY.msg
    RPY.msg
    MultiPriorityTask.msg
-   PID.msg
-   PIDgains.msg
 )
 
 generate_messages(
@@ -46,7 +43,7 @@ catkin_package(
     message_runtime
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
-  )
+)
 
 add_library(${PROJECT_NAME}
   src/joint_impedance_controller.cpp	

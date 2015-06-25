@@ -48,7 +48,7 @@ bool JointImpedanceController::init(hardware_interface::EffortJointInterface *ro
   // D_.resize(kdl_chain_.getNrOfJoints());
 
   sub_gains_ = nh_.subscribe("gains", 1, &JointImpedanceController::setGains, this);
-  sub_posture_ = nh_.subscribe("command_configuration", 1, &JointImpedanceController::commandConfiguration, this);
+  sub_posture_ = nh_.subscribe("command", 1, &JointImpedanceController::command, this);
 
 
   return true;
@@ -91,7 +91,7 @@ void JointImpedanceController::update(const ros::Time& time, const ros::Duration
 }
 
 
-void JointImpedanceController::commandConfiguration(const std_msgs::Float64MultiArray::ConstPtr &msg){
+void JointImpedanceController::command(const std_msgs::Float64MultiArray::ConstPtr &msg){
   if (msg->data.size() == 0) {
     ROS_INFO("Desired configuration must be: %lu dimension", joint_handles_.size());
     }
