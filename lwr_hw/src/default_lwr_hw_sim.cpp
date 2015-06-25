@@ -299,7 +299,8 @@ public:
       double spring_effort = joint_stiffness_command_[j]*( joint_position_command_[j] - joint_position_[j] );
       //double damping_effort = joint_damping_command_[j]*( joint_velocity_[j] );
 
-      const double effort = spring_effort + joint_effort_command_[j] + gravity_effort_(j);
+      const double effort =  joint_effort_command_[j] + gravity_effort_(j);
+//       const double effort = spring_effort + joint_effort_command_[j] + gravity_effort_(j);
       sim_joints_[j]->SetForce(0, effort);
     }
   }

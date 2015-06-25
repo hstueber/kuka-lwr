@@ -15,6 +15,32 @@ lwr:
       - lwr_4_joint
       - lwr_5_joint
       - lwr_6_joint
+      
+  effort_joint_trajectory_controller:
+    type: effort_controllers/JointTrajectoryController
+    joints: 
+      - lwr_0_joint
+      - lwr_1_joint
+      - lwr_2_joint
+      - lwr_3_joint
+      - lwr_4_joint
+      - lwr_5_joint
+      - lwr_6_joint
+    gains:
+        lwr_0_joint: {p: 21000,  d: 0, i: 10, i_clamp: 30}
+        lwr_1_joint: {p: 50000,  d: 0, i: 10, i_clamp: 30}
+        lwr_2_joint: {p: 50000,  d: 0, i: 10, i_clamp: 30}
+        lwr_3_joint: {p: 50000,  d: 0, i: 10, i_clamp: 30}
+        lwr_4_joint: {p: 50000,  d: 0, i: 10, i_clamp: 30}
+        lwr_5_joint: {p: 50000,  d: 0, i: 10, i_clamp: 30}
+        lwr_6_joint: {p: 50000,  d: 0, i: 10, i_clamp: 30}
+
+    constraints:
+      goal_time: 0.5                   # Override default
+
+    state_publish_rate:  25            # Override default
+    action_monitor_rate: 30            # Override default
+    stop_trajectory_duration: 0        # Override default
 
   stiffness_trajectory_controller:
     type: position_controllers/JointTrajectoryController
