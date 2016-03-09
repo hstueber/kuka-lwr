@@ -74,6 +74,8 @@ namespace lwr_controllers
         sub_ft_measures_ = n.subscribe(n.resolveName("ft_measures"), 1, &CartesianImpedanceController::updateFT, this);
         pub_goal_ = n.advertise<geometry_msgs::PoseStamped>(n.resolveName("goal"),0);
 
+        pub_msr_pos_ = n.advertise<geometry_msgs::PoseStamped>(n.resolveName("measured_cartesian_position"),0);
+
         // Initial position
         KDL::Rotation cur_R(cart_handles_.at(0).getPosition(),
                             cart_handles_.at(1).getPosition(),
@@ -163,6 +165,15 @@ namespace lwr_controllers
 
     }
 
+    void CartesianImpedanceController::command(const geometry_msgs::PoseConstPtr &msg)
+    {
+        // Validate command, for now, only check non-zero of stiffness, damping, and orientation
+
+        // Compute a KDL frame out of the message
+        tf::poseMsgToKDL( *msg, x_des_ );
+    }
+
+    /*
     void CartesianImpedanceController::command(const lwr_controllers::CartesianImpedancePoint::ConstPtr &msg)
     {
         // Validate command, for now, only check non-zero of stiffness, damping, and orientation
@@ -189,6 +200,7 @@ namespace lwr_controllers
         pub_goal_.publish(goal);
 
     }
+    */
 
     bool CartesianImpedanceController::command_cb(SetCartesianImpedanceCommand::Request &req, SetCartesianImpedanceCommand::Response &res)
     {
@@ -236,6 +248,11 @@ namespace lwr_controllers
             if(c > 23 && c < 30)
                 cart_handles_.at(c).setCommand(f_des_[c-24]);
         }
+
+        geometry_msgs::PoseStamped pose;
+        pose.header.stamp = time;
+        tf::poseKDLToMsg(x_cur_, pose.pose);
+        pub_msr_pos_.publish(pose);
     }
 
     void CartesianImpedanceController::stopping(const ros::Time& time)

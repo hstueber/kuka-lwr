@@ -19,6 +19,9 @@
 // The format of the command specification
 #include "lwr_controllers/SetCartesianImpedanceCommand.h"
 
+// Using this message type
+#include <lwr_controllers/PoseRPY.h>
+
 namespace lwr_controllers
 {
     class CartesianImpedanceController: public controller_interface::Controller<hardware_interface::PositionCartesianInterface>
@@ -31,7 +34,8 @@ namespace lwr_controllers
 		void starting(const ros::Time& time);
 		void stopping(const ros::Time& time);
 		void update(const ros::Time& time, const ros::Duration& period);
-        void command(const lwr_controllers::CartesianImpedancePoint::ConstPtr &msg);
+        void command(const geometry_msgs::PoseConstPtr &msg);
+        //void command(const lwr_controllers::CartesianImpedancePoint::ConstPtr &msg);
         bool command_cb(lwr_controllers::SetCartesianImpedanceCommand::Request &req, lwr_controllers::SetCartesianImpedanceCommand::Response &res);
         void updateFT(const geometry_msgs::WrenchStamped::ConstPtr &msg);
 
@@ -46,6 +50,7 @@ namespace lwr_controllers
         ros::ServiceServer srv_command_;
         ros::Subscriber sub_ft_measures_;
         ros::Publisher pub_goal_;
+        ros::Publisher pub_msr_pos_;
 
 		// Cartesian vars
         KDL::Frame x_ref_;
