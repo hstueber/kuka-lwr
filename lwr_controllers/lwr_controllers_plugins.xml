@@ -1,5 +1,12 @@
 <library path="lib/liblwr_controllers">
 
+  <class name="lwr_controllers/ITRJointImpedanceController" type="lwr_controllers::ITRJointImpedanceController" base_class_type="controller_interface::ControllerBase">
+    <description>
+	  TUM-ITR:
+      Controller to directly command the LWR in the native joint_impedance mode
+    </description>
+  </class>
+
   <class name="lwr_controllers/ITRCartesianImpedanceController" type="lwr_controllers::ITRCartesianImpedanceController" base_class_type="controller_interface::ControllerBase">
     <description>
 	  TUM-ITR:

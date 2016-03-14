@@ -6,15 +6,15 @@
 #include <kdl_parser/kdl_parser.hpp>
 #include <urdf/model.h>
 
-#include <lwr_controllers/joint_impedance_controller.h>
+#include <lwr_controllers/itr_joint_impedance_controller.h>
 
 namespace lwr_controllers {
 
-JointImpedanceController::JointImpedanceController() {}
+ITRJointImpedanceController::ITRJointImpedanceController() {}
 
-JointImpedanceController::~JointImpedanceController() {}
+ITRJointImpedanceController::~ITRJointImpedanceController() {}
 
-bool JointImpedanceController::init(hardware_interface::EffortJointInterface *robot, ros::NodeHandle &n)
+bool ITRJointImpedanceController::init(hardware_interface::EffortJointInterface *robot, ros::NodeHandle &n)
 {
   KinematicChainControllerBase<hardware_interface::EffortJointInterface>::init(robot, n);
 
@@ -47,8 +47,8 @@ bool JointImpedanceController::init(hardware_interface::EffortJointInterface *ro
   // K_.resize(kdl_chain_.getNrOfJoints());
   // D_.resize(kdl_chain_.getNrOfJoints());
 
-  sub_gains_ = nh_.subscribe("gains", 1, &JointImpedanceController::setGains, this);
-  sub_posture_ = nh_.subscribe("command", 1, &JointImpedanceController::command, this);
+  sub_gains_ = nh_.subscribe("gains", 1, &ITRJointImpedanceController::setGains, this);
+  sub_posture_ = nh_.subscribe("command", 1, &ITRJointImpedanceController::command, this);
 
 
   return true;
@@ -56,7 +56,7 @@ bool JointImpedanceController::init(hardware_interface::EffortJointInterface *ro
 
 }
 
-void JointImpedanceController::starting(const ros::Time& time)
+void ITRJointImpedanceController::starting(const ros::Time& time)
 {
   // get joint positions
   for(size_t i=0; i<joint_handles_.size(); i++) {
@@ -71,7 +71,7 @@ void JointImpedanceController::starting(const ros::Time& time)
 
 }
 
-void JointImpedanceController::update(const ros::Time& time, const ros::Duration& period)
+void ITRJointImpedanceController::update(const ros::Time& time, const ros::Duration& period)
 {
 
   // get joint positions	
@@ -91,7 +91,7 @@ void JointImpedanceController::update(const ros::Time& time, const ros::Duration
 }
 
 
-void JointImpedanceController::command(const std_msgs::Float64MultiArray::ConstPtr &msg){
+void ITRJointImpedanceController::command(const std_msgs::Float64MultiArray::ConstPtr &msg){
   if (msg->data.size() == 0) {
     ROS_INFO("Desired configuration must be: %lu dimension", joint_handles_.size());
     }
@@ -107,7 +107,7 @@ void JointImpedanceController::command(const std_msgs::Float64MultiArray::ConstP
 
   }
 
-void JointImpedanceController::setGains(const std_msgs::Float64MultiArray::ConstPtr &msg){
+void ITRJointImpedanceController::setGains(const std_msgs::Float64MultiArray::ConstPtr &msg){
 
   if (msg->data.size() == 2*joint_handles_.size()){
     for (unsigned int i = 0; i < joint_handles_.size(); ++i){
@@ -135,4 +135,4 @@ void JointImpedanceController::setGains(const std_msgs::Float64MultiArray::Const
 
 }                                                           // namespace
 
-PLUGINLIB_EXPORT_CLASS( lwr_controllers::JointImpedanceController, controller_interface::ControllerBase)
+PLUGINLIB_EXPORT_CLASS( lwr_controllers::ITRJointImpedanceController, controller_interface::ControllerBase)

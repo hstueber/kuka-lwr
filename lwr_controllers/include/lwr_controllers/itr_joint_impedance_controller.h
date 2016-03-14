@@ -17,12 +17,12 @@
 namespace lwr_controllers
 {
 
-	class JointImpedanceController: public controller_interface::KinematicChainControllerBase<hardware_interface::EffortJointInterface>
+    class ITRJointImpedanceController: public controller_interface::KinematicChainControllerBase<hardware_interface::EffortJointInterface>
 	{
 	public:
 
-		JointImpedanceController();
-		~JointImpedanceController();
+        ITRJointImpedanceController();
+        ~ITRJointImpedanceController();
 
 		bool init(hardware_interface::EffortJointInterface *robot, ros::NodeHandle &n);
 
