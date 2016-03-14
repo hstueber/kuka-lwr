@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   geometry_msgs
   std_msgs
+  joint_impedance_interface
 )
 
 include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
@@ -51,6 +52,7 @@ catkin_package(
     forward_command_controller
     kdl_parser
     message_runtime
+    joint_impedance_interface
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
 )

@@ -20,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
   transmission_interface
   gazebo_ros
   std_msgs
+  joint_impedance_interface
 )
 
 add_definitions (-fpermissive -std=c++11)
@@ -41,6 +42,7 @@ catkin_package(
     transmission_interface
     gazebo_ros
     std_msgs
+    joint_impedance_interface
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME} lwr_hw_gazebo_plugin friremote frilremote
   DEPENDS gazebo
