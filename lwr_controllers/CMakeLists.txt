@@ -56,6 +56,8 @@ catkin_package(
 )
 
 add_library(${PROJECT_NAME}
+  src/itr_cartesian_impedance_controller.cpp
+  src/itr_joint_impedance_controller.cpp
   src/joint_impedance_controller.cpp	
   src/inverse_dynamics_controller.cpp
   src/computed_torque_controller.cpp
