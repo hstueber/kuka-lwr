@@ -34,7 +34,7 @@
 
 	<!-- using the models -->
 	<xacro:kuka_lwr parent="box" name="lwr">
-		<origin xyz="0 0 1" rpy="0 0 0"/>
+		<origin xyz="0.41 -0.195 1.339" rpy="-2.15809962 -0.447832275 -2.86056"/>
 	</xacro:kuka_lwr>
 
 </robot>

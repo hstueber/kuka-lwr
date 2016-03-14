@@ -1,5 +1,17 @@
 <library path="lib/liblwr_controllers">
 
+  <class name="lwr_controllers/ITRCartesianImpedanceController" type="lwr_controllers::ITRCartesianImpedanceController" base_class_type="controller_interface::ControllerBase">
+    <description>
+	  TUM-ITR:
+      This is a modified version of the CartesianImpedanceController using the native KUKA cartesian_impedance mode.
+      It uses a different ROS interface to exchange information with the controller, e.g a dedicated topic for each control command such as:
+		position
+		additional force/torque
+		stiffness and damping
+	  It also publishes the measured cartesian position through a ROS topic
+    </description>
+  </class>
+
   <class name="lwr_controllers/CartesianImpedanceController" type="lwr_controllers::CartesianImpedanceController" base_class_type="controller_interface::ControllerBase">
     <description>
       This replicates the Cartesian impedance control of the LWR 4+, but it uses JOINT_EFFORT mode to send the computed torque. Note that, this won't work generally in any robot, since the dynamic term should be added (f_dyn(q, qdot, qdotdot)).
