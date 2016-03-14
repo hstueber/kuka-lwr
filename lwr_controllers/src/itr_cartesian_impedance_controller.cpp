@@ -4,6 +4,10 @@
 
 #include "lwr_controllers/itr_cartesian_impedance_controller.h"
 
+#include <Eigen/Eigen>
+
+#define MAX_ROT_SPEED 0.2
+#define MAX_TRANS_SPEED 0.5
 
 
 using namespace std;
@@ -43,32 +47,12 @@ namespace lwr_controllers
         cout << "reading segment 0 name:" << endl;
         kdl_tree_.getChain(kdl_tree_.getRootSegment()->first, "lwr_base_link", mount_chain);
         cout << "KDL segment 0 name: " << mount_chain.getSegment(0).getName() << endl;
-        //cout << "KDL segment 1 name: " << world_chain.getSegment(1).getName() << endl;
-        //cout << "KDL segment 0 joint name: " << mount_chain.getSegment(0).getJoint().getName() << endl;
-        //cout << "KDL segment 1 joint name: " << world_chain.getSegment(1).getJoint().getName() << endl;
-        //cout << "KDL segment 0 pose(0): " << world_chain.getSegment(0).pose(0.0) << endl;
-        //cout << "KDL segment 1 pose(0): " << world_chain.getSegment(1).pose(0.0) << endl;
+
 
         world2robot_ = mount_chain.getSegment(0).getFrameToTip();
 
         cout << "world2robot transform: " << endl << world2robot_ << endl;
 
-        // 2nd approach:
-//        bool init_transform = true;
-
-//        tf::StampedTransform world_transform;
-//        while (n.ok() && init_transform) {
-//            try {
-//                ros::Time ros_time = ros::Time(0);
-//                tf_listener.lookupTransform("box", "lwr_7_link", ros_time, world_transform);
-//                init_transform = false;
-//            }
-//            catch (tf::TransformException ex){
-//                ROS_ERROR("%s",ex.what());
-//                ros::Duration(1.0).sleep();
-//            }
-//        }
-        ROS_INFO_STREAM ("done!");
         // --------------------------------------------------------------------
 
         joint_names_.push_back( robot_namespace_ + std::string("_0_joint") );
@@ -230,24 +214,29 @@ namespace lwr_controllers
 
         // transform world coordinates into robot coordinates here:
 
-        cout << "callback pose_world" << endl;
+        //cout << "callback pose_world" << endl;
 
         // Compute a KDL frame out of the message
         tf::poseMsgToKDL( *msg, x_world_ );
 
         // Transformation from world_KS into robot_KS:
-        // world2robot_ = world2robot_.Inverse();
-        x_des_.p = world2robot_.M.Inverse() * x_world_.p - world2robot_.p;
-        x_des_.M = world2robot_.M * x_world_.M;
+        // Translation world -> robot
+        x_des_.p = x_world_.p - world2robot_.p;
+        //cout << "x_des translation:" << endl << x_des_ << endl;
+        // Rotation from world -> robot
+        x_des_.p = world2robot_.M.Inverse() * x_des_.p;
+        //cout << "x_des rotated:" << endl << x_des_ << endl;
+        // Orientation world -> robot
+        x_des_.M = world2robot_.M.Inverse() * x_world_.M;
+        //cout << "x_des orientation:" << endl << x_des_ << endl;
 
+//        cout << endl << endl;
 
-        // x_des_ = x_world_ * world2robot_;
-
-        cout << "x_world: " << endl << x_world_ << endl;
-        cout << "x_cur: " << endl << x_cur_ << endl;
-        cout << "x_des: " << endl << x_des_ << endl;
-        cout << "world2robot: " << endl << world2robot_ << endl;
-        cout << "world2robot_Inv: " << endl << world2robot_.Inverse() << endl;
+//        cout << "x_world: " << endl << x_world_ << endl;
+//        cout << "x_cur: " << endl << x_cur_ << endl;
+//        cout << "x_des: " << endl << x_des_ << endl;
+//        cout << "world2robot: " << endl << world2robot_ << endl;
+//        cout << "world2robot_Inv: " << endl << world2robot_.Inverse() << endl;
     }
 
     /*
@@ -325,6 +314,21 @@ namespace lwr_controllers
 
         std::vector<double> cur_T_FRI;
 
+        // TE: cartesian speed limit for new positions:
+        // TODO also add joint speed limit here?
+        KDL::Frame x_err;
+        KDL::Twist x_dot;
+        x_dot.rot = (x_des_.M.GetRot() - x_cur_.M.GetRot()) / period.toSec();
+        x_dot.vel = (x_des_.p - x_cur_.p) / period.toSec();
+        //cout << endl << x_dot;
+
+        for (int i = 0; i < 3; i++) {
+            if (x_dot.rot[i] < MAX_ROT_SPEED) x_des_.M.Rot(x_cur_.M.GetRot(), - MAX_ROT_SPEED * period.toSec());
+            if (x_dot.rot[i] > MAX_ROT_SPEED) x_des_.M.Rot(x_cur_.M.GetRot(), MAX_ROT_SPEED * period.toSec());
+            if (x_dot.vel[i] < MAX_TRANS_SPEED) x_des_.p[i] = x_cur_.p[i] - MAX_TRANS_SPEED * period.toSec();
+            if (x_dot.vel[i] > MAX_TRANS_SPEED) x_des_.p[i] = x_cur_.p[i] + MAX_TRANS_SPEED * period.toSec();
+        }
+
         fromKDLtoFRI(x_des_, cur_T_FRI);
         // forward commands to hwi
         for(int c = 0; c < 30; ++c)
@@ -339,6 +343,7 @@ namespace lwr_controllers
                 cart_handles_.at(c).setCommand(f_des_[c-24]);
         }
 
+        // TE: publish cartesian pose for DEBUG
         geometry_msgs::PoseStamped pose;
         pose.header.stamp = time;
         pose.header.frame_id = "lwr_base_link";
