@@ -109,8 +109,7 @@ int friRemote::doDataExchange()
 	cmd.cmd.cmdFlags=FRI_CMD_JNTPOS;
 	// Note:: If the interface is not in Command mode,
 	// The commands have to be "mirrored" to get in sync
-	// Note:: If the interface is not in Command mode,
-	// The commands have to be "mirrored" to get in sync
+
 	if ((getState() != FRI_STATE_CMD) || (!isPowerOn()))
 	{
 		for (int i = 0; i < LBR_MNJ; i++)
@@ -122,7 +121,8 @@ int friRemote::doDataExchange()
 	{
 		// compute new values here ...
 		for (int i = 0; i < LBR_MNJ; i++)
-			cmd.cmd.jntPos[i]=newJntPosition[i];
+            //cmd.cmd.jntPos[i]=newJntPosition[i];
+            cmd.cmd.jntPos[i]=msr.data.cmdJntPos[i]+msr.data.cmdJntPosFriOffset[i];
 	}
 
 	if (flagDataExchange)
@@ -153,7 +153,7 @@ int friRemote::doJntImpedanceControl(const float newJntPosition[LBR_MNJ],
 
 {
 	// Helper, if not properly initialized or the like...
-	cmd.cmd.cmdFlags=0;
+    // cmd.cmd.cmdFlags=0;
 	if (newJntPosition)
 	{
 		cmd.cmd.cmdFlags|=FRI_CMD_JNTPOS;
@@ -219,23 +219,15 @@ int friRemote::doCartesianImpedanceControl(const float newCartPosition[FRI_CART_
 										   bool flagDataExchange)
 {
 
-		// Helper, if not properly initialized or the like...
-    //cmd.cmd.cmdFlags=0;
+    // Helper, if not properly initialized or the like...
+    // cmd.cmd.cmdFlags=0;
 	if ( newCartPosition )
 	{
 		cmd.cmd.cmdFlags|=FRI_CMD_CARTPOS;
 		for ( int i = 0; i < FRI_CART_FRM_DIM; i++)
 		{
             cmd.cmd.cartPos[i]=newCartPosition[i];
-            // TE:
-            //cmd.cmd.cartPos[i] = msr.data.msrCartPos[i];
-            //std::cout << "fri reading: " << msr.data.msrCartPos[i] << std::endl;
-            //std::cout << "fri newCartPosition: " << newCartPosition[i] << std::endl;
-//            if (newCartPosition[i] < 0.0001 && newCartPosition[i] > -0.0001) {
-//                std::cerr << "GOT U! ---------------";
-//                sleep(5);
-//                exit(1);
-//            }
+
 		}
 	}
 	if ( newCartStiff)

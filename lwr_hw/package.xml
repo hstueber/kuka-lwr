@@ -26,6 +26,8 @@
   <build_depend>gazebo_ros</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>joint_impedance_interface</build_depend>
+  <build_depend>cartesian_impedance_interface</build_depend>
+
 
   <run_depend>gazebo</run_depend>
   <run_depend>gazebo_ros</run_depend>
@@ -45,6 +47,7 @@
   <run_depend>gazebo_ros</run_depend>
   <run_depend>std_msgs</run_depend>
   <run_depend>joint_impedance_interface</run_depend>
+  <run_depend>cartesian_impedance_interface</run_depend>
 
   <export>
     <gazebo_ros plugin_path="${prefix}/lib" gazebo_media_path="${prefix}"/>

@@ -26,9 +26,12 @@ public:
   LWRHWFRI() : LWRHW() {}
   ~LWRHWFRI() { stopKRCComm_ = true; KRCCommThread_.get()->join();}
 
-  void setPort(int port){port_ = port; port_set_ = true;};
-  void setIP(std::string hintToRemoteHost){hintToRemoteHost_ = hintToRemoteHost; ip_set_ = true;};
-  float getSampleTime(){return sampling_rate_;};
+  void setPort(int port){port_ = port; port_set_ = true;}
+  void setIP(std::string hintToRemoteHost){hintToRemoteHost_ = hintToRemoteHost; ip_set_ = true;}
+  float getSampleTime(){return sampling_rate_;}
+
+  // TE: call stopFRI() in case of SIGINT:
+  void callStopFRI() { stopFRI();}
 
   // Init, read, and write, with FRI hooks
   bool init()
@@ -191,6 +194,12 @@ public:
         desired_strategy = CARTESIAN_IMPEDANCE;
         break;
       }
+      else if( it->hardware_interface.compare( std::string("hardware_interface::ImpedanceJointInterface") ) == 0 )
+      {
+        std::cout << "Request to switch to hardware_interface::ImpedanceJointInterface (JOINT_IMPEDANCE)" << std::endl;
+        desired_strategy = JOINT_IMPEDANCE;
+        break;
+      }
     }
 
     for (int j = 0; j < n_joints_; ++j)
@@ -198,6 +207,8 @@ public:
       ///semantic Zero
       joint_position_command_[j] = joint_position_[j];
       joint_effort_command_[j] = 0.0;
+      // TE:
+      std::cout << "JOINT POSITION in doSwitch " << +j << " : " <<  joint_position_[j] << std::endl;
 
       ///call setCommand once so that the JointLimitsInterface receive the correct value on their getCommand()!
       try{  position_interface_.getHandle(joint_names_[j]).setCommand(joint_position_command_[j]);  }
@@ -218,6 +229,10 @@ public:
     {
       stopFRI();
 
+      //TE:
+      std::cout << "SLEEP well my friend 1" << std::endl;
+      sleep(3);
+
       // send to KRL the new strategy
       if( desired_strategy == JOINT_POSITION )
         device_->setToKRLInt(0, JOINT_POSITION);
@@ -226,6 +241,9 @@ public:
       else if( desired_strategy == CARTESIAN_IMPEDANCE)
         device_->setToKRLInt(0, CARTESIAN_IMPEDANCE);
 
+      //TE:
+      std::cout << "SLEEP well my friend 2" << std::endl;
+      sleep(3);
 
       startFRI();
 

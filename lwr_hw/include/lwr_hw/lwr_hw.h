@@ -27,6 +27,10 @@
 #include <kdl/chaindynparam.hpp> //this to compute the gravity verctor
 #include <kdl_parser/kdl_parser.hpp>
 
+// TE: include novel hardware interfaces
+#include <joint_impedance_interface/joint_impedance_interface.h>
+#include <cartesian_impedance_interface/cartesian_impedance_interface.h>
+
 namespace lwr_hw
 {
 
@@ -64,14 +68,15 @@ public:
   virtual void write(ros::Time time, ros::Duration period) = 0;
 
   // get/set control method
-  void setControlStrategy( ControlStrategy strategy){current_strategy_ = strategy;};
-  ControlStrategy getControlStrategy(){ return current_strategy_;};
+  void setControlStrategy( ControlStrategy strategy){current_strategy_ = strategy;}
+  ControlStrategy getControlStrategy(){ return current_strategy_;}
 
   // Hardware interfaces
   hardware_interface::JointStateInterface state_interface_;
   hardware_interface::EffortJointInterface effort_interface_;
   hardware_interface::PositionJointInterface position_interface_;
   hardware_interface::PositionCartesianInterface position_cart_interface_;
+  hardware_interface::ImpedanceJointInterface impedance_joint_interface_;
   // hardware_interface::StiffnessJointInterface stiffness_interface_; // ToDo
   // hardware_interface::ImpedanceointInterface impedance_interface_; // ToDo
 

@@ -28,10 +28,19 @@ lwr:
       - lwr_6_joint_stiffness
 
 ## OTHER CUSTOM CONTROLLERS LEFT HERE AS EXAMPLES
-  gravity_compensation_controller:
-    type: lwr_controllers/GravityCompensation
+    # Cartesian Position
+  cartesian_position:
+    type: lwr_controllers/CartesianPosition
     root_name: lwr_base_link
     tip_name: lwr_7_link
+
+  itr_joint_impedance_controller:
+    type: lwr_controllers/ITRJointImpedanceController
+    robot_name: lwr 
+    root_name: lwr_base_link
+    tip_name: lwr_7_link
+    stiffness_gains: 300 
+    damping_gains: .7
   
   itr_cartesian_impedance_controller:
     type: lwr_controllers/ITRCartesianImpedanceController
@@ -39,6 +48,11 @@ lwr:
     root_name: lwr_base_link
     tip_name: lwr_7_link
     
+  gravity_compensation_controller:
+    type: lwr_controllers/GravityCompensation
+    root_name: lwr_base_link
+    tip_name: lwr_7_link
+
   cartesian_impedance_controller:
     type: lwr_controllers/CartesianImpedanceController
     robot_name: lwr

@@ -19,8 +19,7 @@
 // The format of the command specification
 #include "lwr_controllers/SetCartesianImpedanceCommand.h"
 
-// Using this message type
-#include <lwr_controllers/PoseRPY.h>
+#include <cartesian_impedance_interface/cartesian_impedance_interface.h>
 
 namespace lwr_controllers
 {

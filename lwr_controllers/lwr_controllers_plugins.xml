@@ -1,21 +1,28 @@
 <library path="lib/liblwr_controllers">
 
+  <class name="lwr_controllers/CartesianPosition" type="lwr_controllers::CartesianPosition" base_class_type="controller_interface::ControllerBase">
+    <description>
+      	TUM-ITR:
+	Cartesian Position Controller, based on KUKA LWR control strategy 10: JOINT_POSITION
+    </description>
+  </class>
+
   <class name="lwr_controllers/ITRJointImpedanceController" type="lwr_controllers::ITRJointImpedanceController" base_class_type="controller_interface::ControllerBase">
     <description>
 	  TUM-ITR:
-      Controller to directly command the LWR in the native joint_impedance mode
+      Controller to directly command the LWR in the native strategy 20: JOINT_IMPEDANCE
     </description>
   </class>
 
   <class name="lwr_controllers/ITRCartesianImpedanceController" type="lwr_controllers::ITRCartesianImpedanceController" base_class_type="controller_interface::ControllerBase">
     <description>
 	  TUM-ITR:
-      This is a modified version of the CartesianImpedanceController using the native KUKA cartesian_impedance mode.
+      This is a modified version of the CartesianImpedanceController using the native KUKA strategy 30: CARTESIAN_IMPEDANCE
       It uses a different ROS interface to exchange information with the controller, e.g a dedicated topic for each control command such as:
 		position
 		additional force/torque
 		stiffness and damping
-	  It also publishes the measured cartesian position through a ROS topic
+	  It also publishes the measured cartesian position through a ROS topic (actually for DEBUG purposes)
     </description>
   </class>
 

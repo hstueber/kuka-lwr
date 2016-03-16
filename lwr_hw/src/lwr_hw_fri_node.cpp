@@ -14,10 +14,13 @@
 #include "lwr_hw/lwr_hw_fri.hpp"
 
 bool g_quit = false;
+lwr_hw::LWRHWFRI *lwr_robot_sigint_ptr = nullptr;
 
 void quitRequested(int sig)
 {
   g_quit = true;
+  if (lwr_robot_sigint_ptr)
+      lwr_robot_sigint_ptr->callStopFRI();
 }
 
 bool isStopPressed = false;
@@ -92,6 +95,7 @@ int main( int argc, char** argv )
 
   // construct and start the real lwr
   lwr_hw::LWRHWFRI lwr_robot;
+  lwr_robot_sigint_ptr = &lwr_robot;
   lwr_robot.create(name, urdf_string);
   lwr_robot.setPort(port);
   lwr_robot.setIP(hintToRemoteHost);

@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   std_msgs
   joint_impedance_interface
+  cartesian_impedance_interface
 )
 
 include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
@@ -53,11 +54,13 @@ catkin_package(
     kdl_parser
     message_runtime
     joint_impedance_interface
+    cartesian_impedance_interface
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
 )
 
 add_library(${PROJECT_NAME}
+  src/cartesian_position.cpp
   src/itr_cartesian_impedance_controller.cpp
   src/itr_joint_impedance_controller.cpp
   src/joint_impedance_controller.cpp	

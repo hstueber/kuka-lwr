@@ -24,6 +24,9 @@
 // to read KDL chain for the world robot transform
 #include "KinematicChainControllerBase.h"
 
+// include new cartesian impedance interface
+#include <cartesian_impedance_interface/cartesian_impedance_interface.h>
+
 namespace lwr_controllers
 {
     //class ITRCartesianImpedanceController: public controller_interface::Controller<hardware_interface::PositionCartesianInterface>

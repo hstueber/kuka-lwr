@@ -6,8 +6,8 @@
 
 #include <Eigen/Eigen>
 
-#define MAX_ROT_SPEED 0.2
-#define MAX_TRANS_SPEED 0.5
+#define MAX_ROT_SPEED 0.2   // rad/s
+#define MAX_TRANS_SPEED 20.0 // m/s
 
 
 using namespace std;
@@ -315,19 +315,23 @@ namespace lwr_controllers
         std::vector<double> cur_T_FRI;
 
         // TE: cartesian speed limit for new positions:
-        // TODO also add joint speed limit here?
-        KDL::Frame x_err;
-        KDL::Twist x_dot;
-        x_dot.rot = (x_des_.M.GetRot() - x_cur_.M.GetRot()) / period.toSec();
-        x_dot.vel = (x_des_.p - x_cur_.p) / period.toSec();
-        //cout << endl << x_dot;
+//        KDL::Twist x_dot;
+//        x_dot.rot = (x_des_.M.GetRot() - x_cur_.M.GetRot()) / period.toSec();
+//        x_dot.vel = (x_des_.p - x_cur_.p) / period.toSec();
+//        //cout << endl << x_dot;
 
-        for (int i = 0; i < 3; i++) {
-            if (x_dot.rot[i] < MAX_ROT_SPEED) x_des_.M.Rot(x_cur_.M.GetRot(), - MAX_ROT_SPEED * period.toSec());
-            if (x_dot.rot[i] > MAX_ROT_SPEED) x_des_.M.Rot(x_cur_.M.GetRot(), MAX_ROT_SPEED * period.toSec());
-            if (x_dot.vel[i] < MAX_TRANS_SPEED) x_des_.p[i] = x_cur_.p[i] - MAX_TRANS_SPEED * period.toSec();
-            if (x_dot.vel[i] > MAX_TRANS_SPEED) x_des_.p[i] = x_cur_.p[i] + MAX_TRANS_SPEED * period.toSec();
-        }
+//        for (int i = 0; i < 3; i++) {
+//            //if (x_dot.rot[i] < MAX_ROT_SPEED) x_des_.M.Rot(x_cur_.M.GetRot(), - MAX_ROT_SPEED * period.toSec());
+//            //if (x_dot.rot[i] > MAX_ROT_SPEED) x_des_.M.Rot(x_cur_.M.GetRot(), MAX_ROT_SPEED * period.toSec());
+//            if (x_dot.vel[i] < MAX_TRANS_SPEED) {
+//                x_des_.p[i] = x_cur_.p[i] - MAX_TRANS_SPEED * period.toSec();
+//                ROS_INFO("negative speed limit");
+//            }
+//            if (x_dot.vel[i] > MAX_TRANS_SPEED) {
+//                x_des_.p[i] = x_cur_.p[i] + MAX_TRANS_SPEED * period.toSec();
+//                ROS_INFO("positive speed limit");
+//            }
+//        }
 
         fromKDLtoFRI(x_des_, cur_T_FRI);
         // forward commands to hwi

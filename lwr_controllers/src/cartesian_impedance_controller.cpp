@@ -4,6 +4,7 @@
 
 #include "lwr_controllers/cartesian_impedance_controller.h"
 
+
 namespace lwr_controllers 
 {
     CartesianImpedanceController::CartesianImpedanceController() {}

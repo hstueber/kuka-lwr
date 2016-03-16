@@ -193,6 +193,17 @@ namespace lwr_hw
           joint_names_[j], &joint_position_[j], &joint_velocity_[j], &joint_effort_[j]));
 
       // Decide what kind of command interface this actuator/joint has
+
+      // TE: registering novel ImpedanceJointHandle
+      hardware_interface::ImpedanceJointHandle joint_handle_impedance;
+      joint_handle_impedance = hardware_interface::ImpedanceJointHandle(state_interface_.getHandle(joint_names_[j]),
+                                                     &joint_position_command_[j],
+                                                     &joint_effort_command_[j],
+                                                     &joint_stiffness_command_[j],
+                                                     &joint_damping_command_[j]);
+
+      impedance_joint_interface_.registerHandle(joint_handle_impedance);
+
       hardware_interface::JointHandle joint_handle_effort;
       joint_handle_effort = hardware_interface::JointHandle(state_interface_.getHandle(joint_names_[j]),
                                                        &joint_effort_command_[j]);
@@ -270,6 +281,10 @@ namespace lwr_hw
     registerInterface(&effort_interface_);
     registerInterface(&position_interface_);
     registerInterface(&position_cart_interface_);
+
+    // TE: register novel interface
+    registerInterface(&impedance_joint_interface_);
+    std::cout << "TE: Registered impedance joint interface"  << std::endl;
   }
 
   // Register the limits of the joint specified by joint_name and\ joint_handle. The limits are
@@ -486,6 +501,13 @@ namespace lwr_hw
         // std::cout << "One controller wants to work on hardware_interface::PositionCartesianInterface" << std::endl;
         desired_strategies.push_back( CARTESIAN_IMPEDANCE );
       }
+      // TE:
+      else if( it->hardware_interface.compare( std::string("hardware_interface::ImpedanceJointInterface") ) == 0 )
+      {
+        // Debug
+        // std::cout << "One controller wants to work on hardware_interface::ImpedanceJointInterface" << std::endl;
+        desired_strategies.push_back( JOINT_IMPEDANCE );
+      }
       else
       {
         // Debug
@@ -532,6 +554,13 @@ namespace lwr_hw
         desired_strategy = CARTESIAN_IMPEDANCE;
         break;
       }
+      // TE:
+      else if( it->hardware_interface.compare( std::string("hardware_interface::ImpedanceJointInterface") ) == 0 )
+      {
+        std::cout << "Request to switch to hardware_interface::ImpedanceJointInterface (JOINT_IMPEDANCE)" << std::endl;
+        desired_strategy = JOINT_IMPEDANCE;
+        break;
+      }
     }
 
     for (int j = 0; j < n_joints_; ++j)
@@ -545,6 +574,10 @@ namespace lwr_hw
       catch(const hardware_interface::HardwareInterfaceException&){}
       try{  effort_interface_.getHandle(joint_names_[j]).setCommand(joint_effort_command_[j]);  }
       catch(const hardware_interface::HardwareInterfaceException&){}
+      // TE:
+      try{  impedance_joint_interface_.getHandle(joint_names_[j]).setCommand(joint_position_command_[j], joint_effort_command_[j], joint_stiffness_command_[j], joint_damping_command_[j]);  }
+      catch(const hardware_interface::HardwareInterfaceException&){}
+
 
       ///reset joint_limit_interfaces
       pj_sat_interface_.reset();
