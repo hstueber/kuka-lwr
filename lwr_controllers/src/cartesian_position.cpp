@@ -18,7 +18,7 @@ bool CartesianPosition::init(hardware_interface::PositionJointInterface *robot, 
 {
     if( !(KinematicChainControllerBase<hardware_interface::PositionJointInterface>::init(robot, n)) )
     {
-        ROS_ERROR("Couldn't initilize CartesianPosition controller.");
+        ROS_ERROR("Couldn't initialize CartesianPosition controller.");
         return false;
     }
 
@@ -56,7 +56,30 @@ bool CartesianPosition::init(hardware_interface::PositionJointInterface *robot, 
 
 void CartesianPosition::starting(const ros::Time& time)
 {
+    // neccessary if interface uses controller switching
+    // get joint positions
+    joint_des_states_last_step.resize(kdl_chain_.getNrOfJoints());
+    for(int i=0; i < joint_handles_.size(); i++)
+    {
+        joint_msr_states_.q(i) = joint_handles_[i].getPosition();
+        joint_msr_states_.qdot(i) = joint_handles_[i].getVelocity();
+        joint_des_states_.q(i) = joint_msr_states_.q(i);
+        joint_des_states_last_step.q(i) = joint_msr_states_.q(i);
+        joint_des_states_last_step.qdot(i) = 0.0;
+    }
 
+    // computing forward kinematics
+    fk_pos_solver_->JntToCart(joint_msr_states_.q, x_);
+
+    //Desired posture is the current one
+    x_des_ = x_;
+    v_des_ = KDL::Twist(KDL::Vector(0,0,0),KDL::Vector(0,0,0)) ;
+    cmd_flag_ = 0;
+
+    for (int i = 0; i < joint_handles_.size(); i++)
+    {
+        joint_handles_[i].setCommand(joint_msr_states_.q(i));
+    }
 }
 
 void CartesianPosition::update(const ros::Time& time, const ros::Duration& period)
@@ -116,46 +139,32 @@ void CartesianPosition::update(const ros::Time& time, const ros::Duration& perio
         {
             joint_des_states_.qdot(i) = q_dot_null(i);
             for (int k = 0; k < J_pinv_.cols(); k++)
-                joint_des_states_.qdot(i) += J_pinv_(i,k)*x_err_(k); // J_pinv*x_err + (I - J_pinv * J) * const * q_msr
+                joint_des_states_.qdot(i) += J_pinv_(i,k)*x_err_(k);
 
         }
         for (int i = 0; i < joint_handles_.size(); i++)
         {
             double qddot = (joint_des_states_.qdot(i) - joint_des_states_last_step.qdot(i))/period.toSec();
-            //ROS_INFO_STREAM("joint_" << i << ": " << qddot);
             qddot = std::min(std::max(qddot,-1.5),1.5); // limit acceleration
             joint_des_states_.qdot(i) = joint_des_states_last_step.qdot(i) + qddot*period.toSec();
             joint_des_states_.qdot(i) = std::min(std::max(joint_des_states_.qdot(i),-0.5),0.5); // limit velocity
 
             // integrating q_dot -> getting q (Euler method)
-
             joint_des_states_.q(i) += period.toSec()*joint_des_states_.qdot(i);
-            //joint_des_states_.q(i) = (joint_des_states_.qdot(i) + joint_msr_states_.q(i))*0.1 + joint_des_states_.q(i) * 0.9;
-            //ROS_INFO_STREAM("joint_" << i << ": " << joint_msr_states_.q(i) << "\t desired: " << joint_des_states_.q(i) << "\t period " << period.toSec());
 
-
-            // joint limits saturation
-            
+            // joint limits saturation         
             if (joint_des_states_.q(i) < joint_limits_.min(i))
                 joint_des_states_.q(i) = joint_limits_.min(i);
             if (joint_des_states_.q(i) > joint_limits_.max(i))
                 joint_des_states_.q(i) = joint_limits_.max(i);
         }
-
-        /*if (Equal(x_, x_des_, 0.005))
-            {
-                ROS_INFO("On target");
-                cmd_flag_ = 0;
-            }*/
     }
-
 
     // set controls for joints
     for (int i = 0; i < joint_handles_.size(); i++)
     {
         joint_handles_[i].setCommand(joint_des_states_.q(i));
-        joint_des_states_last_step.qdot(i) = /*joint_des_states_last_step.qdot(i)*0.9 + 0.1* */(joint_des_states_.q(i) - joint_des_states_last_step.q(i))/period.toSec();
-        //ROS_INFO_STREAM("joint_" << i << ": " << joint_des_states_.q(i) << "\t" << joint_des_states_last_step.q(i) << "\t" << joint_des_states_last_step.qdot(i));
+        joint_des_states_last_step.qdot(i) = (joint_des_states_.q(i) - joint_des_states_last_step.q(i))/period.toSec();
         joint_des_states_last_step.q(i) = joint_des_states_.q(i);
     }
 }
