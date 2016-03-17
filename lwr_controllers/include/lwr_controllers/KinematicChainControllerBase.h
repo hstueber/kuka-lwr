@@ -27,7 +27,7 @@ namespace controller_interface
 	class KinematicChainControllerBase: public Controller<JI>
 	{
 	public:
-		KinematicChainControllerBase() {}
+        KinematicChainControllerBase() {}
 		~KinematicChainControllerBase() {}
 
         bool init(JI *robot, ros::NodeHandle &n);

@@ -76,9 +76,9 @@ namespace lwr_controllers
 		KDL::Twist x_err_;
 
         // transform of the robot mounting position
-        KDL::Frame world2robot_;
-        // world coordinates of received command
-        KDL::Frame x_world_;
+        KDL::Frame base_link2robot_;
+        // base_link coordinates of received command
+        KDL::Frame x_base_link_;
 
 		// The jacobian at q_msg
         // KDL::Jacobian J_;

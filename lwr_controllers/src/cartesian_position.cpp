@@ -9,6 +9,11 @@
 
 #include <math.h>
 
+#include <kdl_conversions/kdl_msg.h>
+#include <kdl/frames_io.hpp>
+
+using namespace std;
+
 namespace lwr_controllers 
 {
 CartesianPosition::CartesianPosition() {}
@@ -16,11 +21,33 @@ CartesianPosition::~CartesianPosition() {}
 
 bool CartesianPosition::init(hardware_interface::PositionJointInterface *robot, ros::NodeHandle &n)
 {
+    if (!ros::param::search(n.getNamespace(),"robot_name", robot_namespace_))
+    {
+        ROS_WARN_STREAM("CartesianPositionController: No robot name found on parameter server ("<<n.getNamespace()<<"/robot_name), using the namespace...");
+        robot_namespace_ = n.getNamespace();
+        //return false;
+    }
+    if (!n.getParam("robot_name", robot_namespace_))
+    {
+        ROS_WARN_STREAM("CartesianPositionController: Could not read robot name from parameter server ("<<n.getNamespace()<<"/robot_name), using the namespace...");
+        robot_namespace_ = n.getNamespace();
+        //return false;
+    }
+
     if( !(KinematicChainControllerBase<hardware_interface::PositionJointInterface>::init(robot, n)) )
     {
         ROS_ERROR("Couldn't initialize CartesianPosition controller.");
         return false;
     }
+
+    // stuff to read KDL chain in order to get the transform between base_link and robot
+    KDL::Chain mount_chain;
+    //cout << "reading segment 0 name:" << endl;
+    kdl_tree_.getChain(kdl_tree_.getRootSegment()->first, this->robot_namespace_ + "_base_link", mount_chain);
+    //cout << "KDL segment 0 name: " << mount_chain.getSegment(0).getName() << endl;
+    base_link2robot_ = mount_chain.getSegment(0).getFrameToTip();
+    //cout << "base_link2robot transform: " << endl << base_link2robot_ << endl;
+    // ----------
 
     jnt_to_jac_solver_.reset(new KDL::ChainJntToJacSolver(kdl_chain_));
     fk_pos_solver_.reset(new KDL::ChainFkSolverPos_recursive(kdl_chain_));
@@ -49,7 +76,9 @@ bool CartesianPosition::init(hardware_interface::PositionJointInterface *robot, 
     v_des_ = KDL::Twist(KDL::Vector(0,0,0),KDL::Vector(0,0,0)) ;
     cmd_flag_ = 0;
 
-    sub_command_ = nh_.subscribe("command", 1, &CartesianPosition::command, this);
+    sub_command_ = nh_.subscribe("pose", 1, &CartesianPosition::pose, this);
+    sub_command_ = nh_.subscribe("pose_base_link", 1, &CartesianPosition::pose_base_link, this);
+    //sub_command_ = nh_.subscribe("command", 1, &CartesianPosition::command, this);
 
     return true;
 }
@@ -152,7 +181,7 @@ void CartesianPosition::update(const ros::Time& time, const ros::Duration& perio
             // integrating q_dot -> getting q (Euler method)
             joint_des_states_.q(i) += period.toSec()*joint_des_states_.qdot(i);
 
-            // joint limits saturation         
+            // joint limits saturation
             if (joint_des_states_.q(i) < joint_limits_.min(i))
                 joint_des_states_.q(i) = joint_limits_.min(i);
             if (joint_des_states_.q(i) > joint_limits_.max(i))
@@ -167,6 +196,29 @@ void CartesianPosition::update(const ros::Time& time, const ros::Duration& perio
         joint_des_states_last_step.qdot(i) = (joint_des_states_.q(i) - joint_des_states_last_step.q(i))/period.toSec();
         joint_des_states_last_step.q(i) = joint_des_states_.q(i);
     }
+}
+
+void CartesianPosition::pose(const geometry_msgs::PoseConstPtr &msg)
+{
+    // Compute a KDL frame out of the message
+    tf::poseMsgToKDL( *msg, x_des_ );
+    cmd_flag_ = 1;
+}
+
+void CartesianPosition::pose_base_link(const geometry_msgs::PoseConstPtr &msg)
+{
+    // Compute a KDL frame out of the message
+    tf::poseMsgToKDL( *msg, x_base_link_ );
+
+    // Transformation from base_link KS into robot KS:
+    // Translation world -> robot
+    x_des_.p = x_base_link_.p - base_link2robot_.p;
+    // Rotation from world -> robot
+    x_des_.p = base_link2robot_.M.Inverse() * x_des_.p;
+    // Orientation world -> robot
+    x_des_.M = base_link2robot_.M.Inverse() * x_base_link_.M;
+
+    cmd_flag_ = 1;
 }
 
 void CartesianPosition::command(const lwr_controllers::PoseRPY::ConstPtr &msg)
@@ -212,6 +264,7 @@ void CartesianPosition::command(const lwr_controllers::PoseRPY::ConstPtr &msg)
     x_des_ = frame_des_;
     cmd_flag_ = 1;
 }
-}
+
+} // end namespace lwr_controllers
 
 PLUGINLIB_EXPORT_CLASS(lwr_controllers::CartesianPosition, controller_interface::ControllerBase)

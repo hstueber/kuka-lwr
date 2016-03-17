@@ -13,7 +13,10 @@
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread/condition.hpp>
-#include <sstream>
+//#include <sstream>
+
+// add include for new command topics pose
+#include <geometry_msgs/PoseStamped.h>
 
 namespace lwr_controllers
 {
@@ -26,7 +29,10 @@ namespace lwr_controllers
 		bool init(hardware_interface::PositionJointInterface *robot, ros::NodeHandle &n);
 		void starting(const ros::Time& time);
 		void update(const ros::Time& time, const ros::Duration& period);
-		void command(const lwr_controllers::PoseRPY::ConstPtr &msg);
+
+        void pose(const geometry_msgs::PoseConstPtr &msg);
+        void pose_base_link(const geometry_msgs::PoseConstPtr &msg);
+        void command(const lwr_controllers::PoseRPY::ConstPtr &msg);
 
 	private:
 		ros::Subscriber sub_command_;
@@ -35,6 +41,13 @@ namespace lwr_controllers
 		KDL::Frame x_;		//current pose
 		KDL::Frame x_des_;	//desired pose
 		KDL::Twist v_des_;      //desired velocity
+
+        // transform of the robot mounting position
+        KDL::Frame base_link2robot_;
+        // base_link coordinates of received command
+        KDL::Frame x_base_link_;
+
+        std::string robot_namespace_;
 
 		ros::Time cmd_stamp_; // Timestamp of last command
 		KDL::Twist x_err_;

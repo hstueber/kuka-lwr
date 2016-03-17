@@ -121,8 +121,8 @@ int friRemote::doDataExchange()
 	{
 		// compute new values here ...
 		for (int i = 0; i < LBR_MNJ; i++)
-            //cmd.cmd.jntPos[i]=newJntPosition[i];
-            cmd.cmd.jntPos[i]=msr.data.cmdJntPos[i]+msr.data.cmdJntPosFriOffset[i];
+            cmd.cmd.jntPos[i]=newJntPosition[i];
+            //cmd.cmd.jntPos[i]=msr.data.cmdJntPos[i]+msr.data.cmdJntPosFriOffset[i];
 	}
 
 	if (flagDataExchange)

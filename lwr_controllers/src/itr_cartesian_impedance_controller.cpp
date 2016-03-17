@@ -34,26 +34,19 @@ namespace lwr_controllers
             //return false;
         }
 
-        // stuff to read KDL chain in order to get the transform between world and robot -------------------------
-
+        // stuff to read KDL chain in order to get the transform between base_link and robot
         if( !(KinematicChainControllerBase<hardware_interface::PositionCartesianInterface >::init(robot, n)) )
         {
             ROS_ERROR("Couldn't execute init of the KinematikChainController to get the KDL chain.");
             return false;
         }
-
         KDL::Chain mount_chain;
-
         cout << "reading segment 0 name:" << endl;
-        kdl_tree_.getChain(kdl_tree_.getRootSegment()->first, "lwr_base_link", mount_chain);
+        kdl_tree_.getChain(kdl_tree_.getRootSegment()->first, this->robot_namespace_ + "_base_link", mount_chain);
         cout << "KDL segment 0 name: " << mount_chain.getSegment(0).getName() << endl;
-
-
-        world2robot_ = mount_chain.getSegment(0).getFrameToTip();
-
-        cout << "world2robot transform: " << endl << world2robot_ << endl;
-
-        // --------------------------------------------------------------------
+        base_link2robot_ = mount_chain.getSegment(0).getFrameToTip();
+        cout << "base_link2robot transform: " << endl << base_link2robot_ << endl;
+        // --------------
 
         joint_names_.push_back( robot_namespace_ + std::string("_0_joint") );
         joint_names_.push_back( robot_namespace_ + std::string("_1_joint") );
@@ -99,7 +92,7 @@ namespace lwr_controllers
         }
 
         sub_pose_ = n.subscribe(n.resolveName("pose"), 1, &ITRCartesianImpedanceController::pose, this);
-        sub_pose_world_ = n.subscribe(n.resolveName("pose_world"), 1, &ITRCartesianImpedanceController::pose_world, this);
+        sub_pose_world_ = n.subscribe(n.resolveName("pose_base_link"), 1, &ITRCartesianImpedanceController::pose_world, this);
 
         sub_gains_ = n.subscribe(n.resolveName("gains"), 1, &ITRCartesianImpedanceController::gains, this);
         sub_addFT_ = n.subscribe(n.resolveName("wrench"), 1, &ITRCartesianImpedanceController::additionalFT, this);
@@ -210,33 +203,16 @@ namespace lwr_controllers
 
     void ITRCartesianImpedanceController::pose_world(const geometry_msgs::PoseConstPtr &msg)
     {
-        // Validate command, for now, only check non-zero of stiffness, damping, and orientation
-
-        // transform world coordinates into robot coordinates here:
-
-        //cout << "callback pose_world" << endl;
-
         // Compute a KDL frame out of the message
-        tf::poseMsgToKDL( *msg, x_world_ );
+        tf::poseMsgToKDL( *msg, x_base_link_ );
 
-        // Transformation from world_KS into robot_KS:
+        // Transformation from base_link KS into robot KS:
         // Translation world -> robot
-        x_des_.p = x_world_.p - world2robot_.p;
-        //cout << "x_des translation:" << endl << x_des_ << endl;
+        x_des_.p = x_base_link_.p - base_link2robot_.p;
         // Rotation from world -> robot
-        x_des_.p = world2robot_.M.Inverse() * x_des_.p;
-        //cout << "x_des rotated:" << endl << x_des_ << endl;
+        x_des_.p = base_link2robot_.M.Inverse() * x_des_.p;
         // Orientation world -> robot
-        x_des_.M = world2robot_.M.Inverse() * x_world_.M;
-        //cout << "x_des orientation:" << endl << x_des_ << endl;
-
-//        cout << endl << endl;
-
-//        cout << "x_world: " << endl << x_world_ << endl;
-//        cout << "x_cur: " << endl << x_cur_ << endl;
-//        cout << "x_des: " << endl << x_des_ << endl;
-//        cout << "world2robot: " << endl << world2robot_ << endl;
-//        cout << "world2robot_Inv: " << endl << world2robot_.Inverse() << endl;
+        x_des_.M = base_link2robot_.M.Inverse() * x_base_link_.M;
     }
 
     /*
