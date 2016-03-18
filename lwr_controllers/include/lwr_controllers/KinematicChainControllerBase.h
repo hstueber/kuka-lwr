@@ -27,7 +27,7 @@ namespace controller_interface
 	class KinematicChainControllerBase: public Controller<JI>
 	{
 	public:
-		KinematicChainControllerBase() {}
+        KinematicChainControllerBase() {}
 		~KinematicChainControllerBase() {}
 
         bool init(JI *robot, ros::NodeHandle &n);
@@ -35,6 +35,7 @@ namespace controller_interface
 	protected:
 		ros::NodeHandle nh_;
 
+        KDL::Tree kdl_tree_;
 		KDL::Chain kdl_chain_;
         KDL::Vector gravity_; 
         KDL::JntArrayAcc joint_msr_states_, joint_des_states_;  // joint states (measured and desired)
@@ -110,7 +111,6 @@ namespace controller_interface
         }
         ROS_INFO("Successfully parsed urdf file");
         
-        KDL::Tree kdl_tree_;
         if (!kdl_parser::treeFromUrdfModel(model, kdl_tree_))
         {
             ROS_ERROR("Failed to construct kdl tree");

@@ -21,6 +21,14 @@
   <!--  Hardware interfaces real/sim -->
   <run_depend> lwr_hw </run_depend>
 
+  <!--  TE: new joint impedance interface -->
+  <run_depend> joint_impedance_interface </run_depend>
+
+  <!--  TE: new cartesian impedance interface -->
+  <run_depend> cartesian_impedance_interface </run_depend>
+
+
+
   <export>
     <metapackage/>
   </export>

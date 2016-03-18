@@ -12,6 +12,12 @@ find_package(catkin REQUIRED COMPONENTS
   kdl_parser
   message_generation
   cmake_modules
+  kdl_conversions
+  sensor_msgs
+  geometry_msgs
+  std_msgs
+  joint_impedance_interface
+  cartesian_impedance_interface
 )
 
 include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
@@ -19,16 +25,22 @@ include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
 link_directories(${catkin_LIBRARY_DIRS})
 
 add_message_files(
-   FILES
-   PoseRPY.msg
-   RPY.msg
-   MultiPriorityTask.msg
+  FILES
+  PoseRPY.msg
+  RPY.msg
+  MultiPriorityTask.msg
+  CartesianImpedancePoint.msg
+  Stiffness.msg
 )
-
+add_service_files(
+  FILES
+  SetCartesianImpedanceCommand.srv
+)
 generate_messages(
   DEPENDENCIES
   std_msgs
   geometry_msgs
+  sensor_msgs
 )
 
 catkin_package(
@@ -41,11 +53,16 @@ catkin_package(
     forward_command_controller
     kdl_parser
     message_runtime
+    joint_impedance_interface
+    cartesian_impedance_interface
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
 )
 
 add_library(${PROJECT_NAME}
+  src/cartesian_position.cpp
+  src/itr_cartesian_impedance_controller.cpp
+  src/itr_joint_impedance_controller.cpp
   src/joint_impedance_controller.cpp	
   src/inverse_dynamics_controller.cpp
   src/computed_torque_controller.cpp
@@ -58,6 +75,7 @@ add_library(${PROJECT_NAME}
   src/dynamic_sliding_mode_controller_task_space.cpp
   src/one_task_inverse_dynamics_jl.cpp
   src/gravity_compensation.cpp
+  src/cartesian_impedance_controller.cpp
 )
 
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencpp)
