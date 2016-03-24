@@ -207,8 +207,6 @@ public:
       ///semantic Zero
       joint_position_command_[j] = joint_position_[j];
       joint_effort_command_[j] = 0.0;
-      // TE:
-      std::cout << "JOINT POSITION in doSwitch " << +j << " : " <<  joint_position_[j] << std::endl;
 
       ///call setCommand once so that the JointLimitsInterface receive the correct value on their getCommand()!
       try{  position_interface_.getHandle(joint_names_[j]).setCommand(joint_position_command_[j]);  }
@@ -229,8 +227,7 @@ public:
     {
       stopFRI();
 
-      //TE:
-      std::cout << "SLEEP well my friend 1" << std::endl;
+      std::cout << "Stopped FRI, sending new control strategy ..." << std::endl;
       sleep(3);
 
       // send to KRL the new strategy
@@ -241,8 +238,7 @@ public:
       else if( desired_strategy == CARTESIAN_IMPEDANCE)
         device_->setToKRLInt(0, CARTESIAN_IMPEDANCE);
 
-      //TE:
-      std::cout << "SLEEP well my friend 2" << std::endl;
+      std::cout << "Sent new control strategy, starting FRI ..." << std::endl;
       sleep(3);
 
       startFRI();

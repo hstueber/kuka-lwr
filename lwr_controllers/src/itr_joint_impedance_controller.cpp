@@ -65,21 +65,16 @@ void ITRJointImpedanceController::starting(const ros::Time& time)
     q_des_(i) = dotq_msr_.q(i);
     dotq_msr_.qdot(i) = joint_handles_[i].getVelocity();
     }
-
-    TEOUT("executing starting");
 }
 
 void ITRJointImpedanceController::update(const ros::Time& time, const ros::Duration& period)
 {
-
-    //TEOUT("update!")
     if (isInitial) {
         q_des_ = dotq_msr_.q;
         isInitial = false;
     }
 
   for(size_t i=0; i<joint_handles_.size(); i++) {
-    //std::cout << "update, reading pos of joint_handle no: " << i << std::endl;
     dotq_msr_.q(i) = joint_handles_[i].getPosition();
     q_msr_(i) = dotq_msr_.q(i);
     dotq_msr_.qdot(i) = joint_handles_[i].getVelocity();
@@ -87,14 +82,8 @@ void ITRJointImpedanceController::update(const ros::Time& time, const ros::Durat
 
   //Compute control law
   for(size_t i=0; i<joint_handles_.size(); i++) {
-    //std::cout << "update, writing commands to joint_handle no: " << i << std::endl;
-      // TODO dont send actual position, could cause joint velocity limit error
-    //joint_handles_[i].setCommand(dotq_msr_.q(i), 0.0, 400, 0.7);
     joint_handles_[i].setCommand(q_des_(i), add_torque_(i), K_(i), D_(i));
-
   }
-
-  //TEOUT("calced control law!")
 }
 
 
@@ -103,7 +92,7 @@ void ITRJointImpedanceController::setPosition(const std_msgs::Float64MultiArray:
     ROS_INFO("Message Size = 0. Desired configuration must be: %lu dimension", joint_handles_.size());
     }
   else if ((int)msg->data.size() != joint_handles_.size()) {
-    ROS_ERROR("Position message had the wrong size: %d", (int)msg->data.size());
+    ROS_ERROR("Position message has the wrong size: %d", (int)msg->data.size());
     return;
     }
   else
@@ -153,6 +142,6 @@ void ITRJointImpedanceController::setGains(const std_msgs::Float64MultiArray::Co
   }
 
 
-}                                                           // namespace
+}  // namespace
 
 PLUGINLIB_EXPORT_CLASS( lwr_controllers::ITRJointImpedanceController, controller_interface::ControllerBase)
