@@ -27,6 +27,8 @@
 // include new cartesian impedance interface
 #include <cartesian_impedance_interface/cartesian_impedance_interface.h>
 
+#include <Eigen/Eigen>
+
 namespace lwr_controllers
 {
     //class ITRCartesianImpedanceController: public controller_interface::Controller<hardware_interface::PositionCartesianInterface>
@@ -49,7 +51,7 @@ namespace lwr_controllers
         void gains(const std_msgs::Float64MultiArrayConstPtr &msg);
 
         // experimental set a world pose, which is then transformed into the robot KS
-        void pose_world(const geometry_msgs::PoseConstPtr &msg);
+        void pose_base_link(const geometry_msgs::PoseConstPtr &msg);
 
     protected:
 
@@ -72,8 +74,17 @@ namespace lwr_controllers
         KDL::Frame x_ref_;
         KDL::Frame x_des_;
         KDL::Frame x_cur_;
+        KDL::Frame x_prev_;
         KDL::Frame x_FRI_;
 		KDL::Twist x_err_;
+        KDL::Frame x_set_;
+
+        Eigen::Quaterniond x_prev_quat_;
+        Eigen::Quaterniond x_cur_quat_;
+        Eigen::Quaterniond x_des_quat_;
+        Eigen::Quaterniond x_set_quat_;
+
+        KDL::Twist x_dot_;
 
         // transform of the robot mounting position
         KDL::Frame base_link2robot_;
@@ -92,17 +103,7 @@ namespace lwr_controllers
 		KDL::Stiffness k_des_;
         KDL::Stiffness d_des_;
 
-		// This class does not exist, should we ask for it? 0, for now.
-		// KDL::Damping d_des_; 
-
-		// Solver to compute x_cur and x_des
-        // boost::scoped_ptr<KDL::ChainFkSolverPos_recursive> fk_pos_solver_;
-
-		// Solver to compute the Jacobian at q_msr
-        // boost::scoped_ptr<KDL::ChainJntToJacSolver> jnt_to_jac_solver_;
-
-		// Computed torque
-        // KDL::JntArray tau_cmd_;
+        bool cmd_flag_;
 
 		// Because of the lack of the Jacobian transpose in KDL
 		void multiplyJacobian(const KDL::Jacobian& jac, const KDL::Wrench& src, KDL::JntArray& dest);

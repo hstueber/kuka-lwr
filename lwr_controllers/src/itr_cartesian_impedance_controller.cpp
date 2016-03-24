@@ -4,10 +4,11 @@
 
 #include "lwr_controllers/itr_cartesian_impedance_controller.h"
 
-#include <Eigen/Eigen>
+// trying to smooth velocity
+#include <control_toolbox/filters.h>
 
-#define MAX_ROT_SPEED 0.2   // rad/s
-#define MAX_TRANS_SPEED 20.0 // m/s
+#define MAX_ROT_SPEED 0.5   // rad/s
+#define MAX_TRANS_SPEED 0.1 // m/s
 
 
 using namespace std;
@@ -92,7 +93,7 @@ namespace lwr_controllers
         }
 
         sub_pose_ = n.subscribe(n.resolveName("pose"), 1, &ITRCartesianImpedanceController::pose, this);
-        sub_pose_world_ = n.subscribe(n.resolveName("pose_base_link"), 1, &ITRCartesianImpedanceController::pose_world, this);
+        sub_pose_world_ = n.subscribe(n.resolveName("pose_base_link"), 1, &ITRCartesianImpedanceController::pose_base_link, this);
 
         sub_gains_ = n.subscribe(n.resolveName("gains"), 1, &ITRCartesianImpedanceController::gains, this);
         sub_addFT_ = n.subscribe(n.resolveName("wrench"), 1, &ITRCartesianImpedanceController::additionalFT, this);
@@ -119,6 +120,7 @@ namespace lwr_controllers
         KDL::Frame cur_T( cur_R, cur_p );
         x_ref_ = cur_T;
         x_des_ = cur_T;
+        x_set_ = cur_T;
 
         // Initial Cartesian stiffness
         KDL::Stiffness k( 800.0, 800.0, 800.0, 50.0, 50.0, 50.0 );
@@ -145,6 +147,8 @@ namespace lwr_controllers
                 cart_handles_.at(c).setCommand(f_des_[c-24]);
         }
 
+        cmd_flag_ = false;
+
         return true;
     }
 
@@ -165,6 +169,10 @@ namespace lwr_controllers
         KDL::Frame cur_T( cur_R, cur_p );
         x_ref_ = cur_T;
         x_des_ = cur_T;
+        x_prev_ = cur_T;
+
+        x_prev_quat_ = Eigen::Quaterniond(Eigen::Matrix3d(x_prev_.M.data).transpose());
+        x_prev_quat_.normalize();
 
         // Initial Cartesian stiffness
         KDL::Stiffness k( 800.0, 800.0, 800.0, 50.0, 50.0, 50.0 );
@@ -194,14 +202,13 @@ namespace lwr_controllers
 
     void ITRCartesianImpedanceController::pose(const geometry_msgs::PoseConstPtr &msg)
     {
-        // Validate command, for now, only check non-zero of stiffness, damping, and orientation
-
         // Compute a KDL frame out of the message
         tf::poseMsgToKDL( *msg, x_des_ );
-        cout << endl << x_des_  << endl;
+
+        cmd_flag_ = true;
     }
 
-    void ITRCartesianImpedanceController::pose_world(const geometry_msgs::PoseConstPtr &msg)
+    void ITRCartesianImpedanceController::pose_base_link(const geometry_msgs::PoseConstPtr &msg)
     {
         // Compute a KDL frame out of the message
         tf::poseMsgToKDL( *msg, x_base_link_ );
@@ -213,36 +220,9 @@ namespace lwr_controllers
         x_des_.p = base_link2robot_.M.Inverse() * x_des_.p;
         // Orientation world -> robot
         x_des_.M = base_link2robot_.M.Inverse() * x_base_link_.M;
+
+        cmd_flag_ = true;
     }
-
-    /*
-    void ITRCartesianImpedanceController::command(const lwr_controllers::CartesianImpedancePoint::ConstPtr &msg)
-    {
-        // Validate command, for now, only check non-zero of stiffness, damping, and orientation
-
-
-        // Compute a KDL frame out of the message
-        tf::poseMsgToKDL( msg->x_FRI, x_des_ );
-
-        // Convert Wrench msg to KDL wrench
-        tf::wrenchMsgToKDL( msg->f_FRI, f_des_ );
-
-        // Convert from Stiffness msg array to KDL stiffness
-        //if(!(msg->k_FRI.x + msg->k_FRI.y + msg->k_FRI.z + msg->k_FRI.rx + msg->k_FRI.ry + msg->k_FRI.rz == 0.0))
-        //{
-            ROS_INFO("Updating Stiffness command");
-            KDL::Stiffness k( msg->k_FRI.x, msg->k_FRI.y, msg->k_FRI.z, msg->k_FRI.rx, msg->k_FRI.ry, msg->k_FRI.rz );
-            k_des_ = k;
-        //}
-
-        // publishe goal
-        geometry_msgs::PoseStamped goal;
-        goal.header = msg->header;
-        goal.pose = msg->x_FRI;
-        pub_goal_.publish(goal);
-
-    }
-    */
 
     bool ITRCartesianImpedanceController::command_cb(SetCartesianImpedanceCommand::Request &req, SetCartesianImpedanceCommand::Response &res)
     {
@@ -290,26 +270,42 @@ namespace lwr_controllers
 
         std::vector<double> cur_T_FRI;
 
-        // TE: cartesian speed limit for new positions:
-//        KDL::Twist x_dot;
-//        x_dot.rot = (x_des_.M.GetRot() - x_cur_.M.GetRot()) / period.toSec();
-//        x_dot.vel = (x_des_.p - x_cur_.p) / period.toSec();
-//        //cout << endl << x_dot;
 
-//        for (int i = 0; i < 3; i++) {
-//            //if (x_dot.rot[i] < MAX_ROT_SPEED) x_des_.M.Rot(x_cur_.M.GetRot(), - MAX_ROT_SPEED * period.toSec());
-//            //if (x_dot.rot[i] > MAX_ROT_SPEED) x_des_.M.Rot(x_cur_.M.GetRot(), MAX_ROT_SPEED * period.toSec());
-//            if (x_dot.vel[i] < MAX_TRANS_SPEED) {
-//                x_des_.p[i] = x_cur_.p[i] - MAX_TRANS_SPEED * period.toSec();
-//                ROS_INFO("negative speed limit");
-//            }
-//            if (x_dot.vel[i] > MAX_TRANS_SPEED) {
-//                x_des_.p[i] = x_cur_.p[i] + MAX_TRANS_SPEED * period.toSec();
-//                ROS_INFO("positive speed limit");
-//            }
-//        }
+        // Cartesian speed limit for new positions:
 
-        fromKDLtoFRI(x_des_, cur_T_FRI);
+        // create quaternions for current and desired orientation, normalize them to get correct angular distance later!
+        x_cur_quat_ = Eigen::Matrix3d(x_cur_.M.data).transpose();
+        x_cur_quat_.normalize();
+        x_des_quat_ = Eigen::Matrix3d(x_des_.M.data).transpose();
+        x_des_quat_.normalize();
+        x_set_quat_ = x_des_quat_;
+
+        // get linear desired velocity
+        x_dot_.vel = (x_des_.p-x_set_.p) / period.toSec();
+
+        // limit linear velocity to desired position
+        double x_dot_vel_norm;
+        x_dot_vel_norm = x_dot_.vel.Norm();
+        if (x_dot_vel_norm > MAX_TRANS_SPEED) {
+            x_dot_.vel = x_dot_.vel / x_dot_vel_norm * MAX_TRANS_SPEED;
+        }       
+
+        if (cmd_flag_) {
+
+            // Interpolate position
+            x_set_.p = x_prev_.p + (x_dot_.vel * period.toSec());
+
+            // Interpolate orientation with SLERP
+            double slerp_ratio = MAX_ROT_SPEED / (x_des_quat_.angularDistance(x_prev_quat_)) * period.toSec();
+            slerp_ratio = std::min(slerp_ratio, 1.0);
+            x_set_quat_ = x_prev_quat_.slerp(slerp_ratio, x_des_quat_);
+
+            // convert quaternion to rot matrix
+            x_set_quat_.normalize(); // need to be normalized to get right rotation matrix
+            x_set_.M = KDL::Rotation::Quaternion(x_set_quat_.x(), x_set_quat_.y(), x_set_quat_.z(), x_set_quat_.w());
+        }
+
+        fromKDLtoFRI(x_set_, cur_T_FRI);
         // forward commands to hwi
         for(int c = 0; c < 30; ++c)
         {
@@ -323,12 +319,8 @@ namespace lwr_controllers
                 cart_handles_.at(c).setCommand(f_des_[c-24]);
         }
 
-        // TE: publish cartesian pose for DEBUG
-        geometry_msgs::PoseStamped pose;
-        pose.header.stamp = time;
-        pose.header.frame_id = "lwr_base_link";
-        tf::poseKDLToMsg(x_cur_, pose.pose);
-        pub_msr_pos_.publish(pose);
+        x_prev_ = x_set_;
+        x_prev_quat_ = x_set_quat_;
     }
 
     void ITRCartesianImpedanceController::stopping(const ros::Time& time)
