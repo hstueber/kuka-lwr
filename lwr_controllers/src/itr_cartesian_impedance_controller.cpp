@@ -42,12 +42,11 @@ namespace lwr_controllers
             return false;
         }
         KDL::Chain mount_chain;
-        cout << "reading segment 0 name:" << endl;
+        //cout << "reading segment 0 name:" << endl;
         kdl_tree_.getChain(kdl_tree_.getRootSegment()->first, this->robot_namespace_ + "_base_link", mount_chain);
-        cout << "KDL segment 0 name: " << mount_chain.getSegment(0).getName() << endl;
+        //cout << "KDL segment 0 name: " << mount_chain.getSegment(0).getName() << endl;
         base_link2robot_ = mount_chain.getSegment(0).getFrameToTip();
-        cout << "base_link2robot transform: " << endl << base_link2robot_ << endl;
-        // --------------
+        //cout << "base_link2robot transform: " << endl << base_link2robot_ << endl;
 
         joint_names_.push_back( robot_namespace_ + std::string("_0_joint") );
         joint_names_.push_back( robot_namespace_ + std::string("_1_joint") );
@@ -129,6 +128,26 @@ namespace lwr_controllers
         // Initial force/torque measure
         KDL::Wrench w(KDL::Vector(0.0, 0.0, 0.0), KDL::Vector(0.0, 0.0, 0.0));
         f_des_ = w;
+
+        // Initial Cartesian damping
+        KDL::Stiffness d(0.7, 0.7, 0.7, 0.7, 0.7, 0.7);
+        d_des_ = d;
+
+        for (int i = 0; i < 3; ++i){
+            if ( !nh_.getParam("position_stiffness_gains", k_des_[i] ) ){
+                ROS_WARN("Stiffness gain not set in yaml file, Using %f", k_des_[i]);
+            }
+        }
+        for (int i = 3; i < 6; ++i){
+            if ( !nh_.getParam("orientation_stiffness_gains", k_des_[i] ) ){
+                ROS_WARN("Stiffness gain not set in yaml file, Using %f", k_des_[i]);
+            }
+        }
+        for (int i = 0; i < 6; ++i){
+            if ( !nh_.getParam("damping_gains", d_des_[i]) ){
+                ROS_WARN("Damping gain not set in yaml file, Using %f", d_des_[i]);
+            }
+        }
 
         std::vector<double> cur_T_FRI;
 
