@@ -11,7 +11,6 @@
 #define TEOUT(str) printf("TE: "); printf(str); printf("\n");
 #include <iostream>
 
-
 namespace lwr_controllers {
 
 ITRJointImpedanceController::ITRJointImpedanceController()
@@ -32,19 +31,27 @@ bool ITRJointImpedanceController::init(hardware_interface::ImpedanceJointInterfa
   ROS_DEBUG(" Number of joints in handle = %lu", joint_handles_.size() );
 
   for (int i = 0; i < joint_handles_.size(); ++i){
-    if ( !nh_.getParam("stiffness_gains", K_(i) ) ){
-      ROS_WARN("Stiffness gain not set in yaml file, Using %f", K_(i));
+      if ( !nh_.getParam("stiffness_gains", K_(i) ) ){
+          ROS_WARN("Stiffness gain not set in yaml file, Using %f", K_(i));
       }
-    }
+  }
   for (int i = 0; i < joint_handles_.size(); ++i){
-    if ( !nh_.getParam("damping_gains", D_(i)) ){
-      ROS_WARN("Damping gain not set in yaml file, Using %f", D_(i));
+      if ( !nh_.getParam("damping_gains", D_(i)) ){
+          ROS_WARN("Damping gain not set in yaml file, Using %f", D_(i));
       }
-    }
+  }
+
+  max_joint_speed_ = 0.5;   // rad/s
+  // get param for speed limit
+  if ( !nh_.getParam("max_joint_speed", max_joint_speed_) ){
+      ROS_WARN("Max joint speed not set in yaml file, Using %f", max_joint_speed_);
+  }
 
   dotq_msr_.resize(kdl_chain_.getNrOfJoints());
   q_msr_.resize(kdl_chain_.getNrOfJoints());
   q_des_.resize(kdl_chain_.getNrOfJoints());
+  q_set_.resize(kdl_chain_.getNrOfJoints());
+  q_des_vel_.resize(kdl_chain_.getNrOfJoints());
   add_torque_.resize(kdl_chain_.getNrOfJoints());
 
   sub_position_ = nh_.subscribe("position", 1, &ITRJointImpedanceController::setPosition, this);
@@ -63,7 +70,8 @@ void ITRJointImpedanceController::starting(const ros::Time& time)
     add_torque_(i) = 0;
     dotq_msr_.q(i) = joint_handles_[i].getPosition();
     q_des_(i) = dotq_msr_.q(i);
-    dotq_msr_.qdot(i) = joint_handles_[i].getVelocity();
+    q_set_(i) = dotq_msr_.q(i);
+    dotq_msr_.qdot(i) = joint_handles_[i].getVelocity();   
     }
 }
 
@@ -74,16 +82,40 @@ void ITRJointImpedanceController::update(const ros::Time& time, const ros::Durat
         isInitial = false;
     }
 
-  for(size_t i=0; i<joint_handles_.size(); i++) {
-    dotq_msr_.q(i) = joint_handles_[i].getPosition();
-    q_msr_(i) = dotq_msr_.q(i);
-    dotq_msr_.qdot(i) = joint_handles_[i].getVelocity();
+    for(int i=0; i<joint_handles_.size(); i++) {
+        // get desired joint velocity
+        q_des_vel_.qdot(i) = (q_des_(i) - q_set_(i)) / period.toSec();
+
+        dotq_msr_.q(i) = joint_handles_[i].getPosition();
+        q_msr_(i) = dotq_msr_.q(i);
+        dotq_msr_.qdot(i) = joint_handles_[i].getVelocity();
     }
 
-  //Compute control law
-  for(size_t i=0; i<joint_handles_.size(); i++) {
-    joint_handles_[i].setCommand(q_des_(i), add_torque_(i), K_(i), D_(i));
-  }
+    // compute euklidean norm of joint velocity
+    double q_des_vel_norm = 0;
+    for (int i=0; i<joint_handles_.size(); i++) {
+        q_des_vel_norm += q_des_vel_.qdot(i) * q_des_vel_.qdot(i);
+    }
+    q_des_vel_norm = sqrt(q_des_vel_norm);
+
+    // limit joint velocity
+    if (q_des_vel_norm > max_joint_speed_) {
+        for (int i=0; i<joint_handles_.size(); i++) {
+            q_des_vel_.qdot(i) = q_des_vel_.qdot(i) / q_des_vel_norm * max_joint_speed_;
+        }
+    }
+
+    // integrate joint position from limited joint velocity
+    for (int i=0; i<joint_handles_.size(); i++) {
+        q_set_(i) += q_des_vel_.qdot(i) * period.toSec();
+        // limit position saturation
+        q_set_(i) = std::max(std::min(q_set_(i), joint_limits_.max(i)), joint_limits_.min(i));
+    }
+
+    // set command to FRI...
+    for(size_t i=0; i<joint_handles_.size(); i++) {
+        joint_handles_[i].setCommand(q_set_(i), add_torque_(i), K_(i), D_(i));
+    }
 }
 
 

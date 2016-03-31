@@ -38,7 +38,8 @@ namespace lwr_controllers
         ros::Subscriber sub_torque_;
 
         KDL::JntArrayVel dotq_msr_;
-        KDL::JntArray q_msr_, q_des_;
+        KDL::JntArrayVel q_des_vel_;
+        KDL::JntArray q_msr_, q_des_, q_set_;
         KDL::JntArray tau_des_, tau_cmd_, tau_gravity_;
         KDL::JntArray K_, D_;
         KDL::JntArray add_torque_;
@@ -47,6 +48,7 @@ namespace lwr_controllers
 
         KDL::JntArray initial_position_;
         bool isInitial;
+        double max_joint_speed_;
 
     };
 
