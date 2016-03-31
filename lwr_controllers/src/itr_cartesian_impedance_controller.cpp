@@ -7,10 +7,6 @@
 // trying to smooth velocity
 #include <control_toolbox/filters.h>
 
-#define MAX_ROT_SPEED 0.5   // rad/s
-#define MAX_TRANS_SPEED 0.1 // m/s
-
-
 using namespace std;
 
 namespace lwr_controllers 
@@ -135,18 +131,29 @@ namespace lwr_controllers
 
         for (int i = 0; i < 3; ++i){
             if ( !nh_.getParam("position_stiffness_gains", k_des_[i] ) ){
-                ROS_WARN("Stiffness gain not set in yaml file, Using %f", k_des_[i]);
+                ROS_WARN("Position stiffness gain not set in yaml file, Using %f", k_des_[i]);
             }
         }
         for (int i = 3; i < 6; ++i){
             if ( !nh_.getParam("orientation_stiffness_gains", k_des_[i] ) ){
-                ROS_WARN("Stiffness gain not set in yaml file, Using %f", k_des_[i]);
+                ROS_WARN("Orientation stiffness gain not set in yaml file, Using %f", k_des_[i]);
             }
         }
         for (int i = 0; i < 6; ++i){
             if ( !nh_.getParam("damping_gains", d_des_[i]) ){
                 ROS_WARN("Damping gain not set in yaml file, Using %f", d_des_[i]);
             }
+        }
+
+        max_trans_speed_ = 0.1; // m/s
+        max_rot_speed_ = 0.5;   // rad/s
+
+        // get params for speed limit
+        if ( !nh_.getParam("max_trans_speed", max_trans_speed_) ){
+            ROS_WARN("Max translation speed not set in yaml file, Using %f", max_trans_speed_);
+        }
+        if ( !nh_.getParam("max_rot_speed", max_rot_speed_) ){
+            ROS_WARN("Max rotation speed not set in yaml file, Using %f", max_rot_speed_);
         }
 
         std::vector<double> cur_T_FRI;
@@ -305,8 +312,8 @@ namespace lwr_controllers
         // limit linear velocity to desired position
         double x_dot_vel_norm;
         x_dot_vel_norm = x_dot_.vel.Norm();
-        if (x_dot_vel_norm > MAX_TRANS_SPEED) {
-            x_dot_.vel = x_dot_.vel / x_dot_vel_norm * MAX_TRANS_SPEED;
+        if (x_dot_vel_norm > max_trans_speed_) {
+            x_dot_.vel = x_dot_.vel / x_dot_vel_norm * max_trans_speed_;
         }       
 
         if (cmd_flag_) {
@@ -315,7 +322,7 @@ namespace lwr_controllers
             x_set_.p = x_prev_.p + (x_dot_.vel * period.toSec());
 
             // Interpolate orientation with SLERP
-            double slerp_ratio = MAX_ROT_SPEED / (x_des_quat_.angularDistance(x_prev_quat_)) * period.toSec();
+            double slerp_ratio = max_rot_speed_ / (x_des_quat_.angularDistance(x_prev_quat_)) * period.toSec();
             slerp_ratio = std::min(slerp_ratio, 1.0);
             x_set_quat_ = x_prev_quat_.slerp(slerp_ratio, x_des_quat_);
 

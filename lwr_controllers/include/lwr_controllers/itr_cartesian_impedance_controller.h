@@ -105,6 +105,9 @@ namespace lwr_controllers
 
         bool cmd_flag_;
 
+        double max_trans_speed_; // m/s
+        double max_rot_speed_;   // rad/s
+
 		// Because of the lack of the Jacobian transpose in KDL
 		void multiplyJacobian(const KDL::Jacobian& jac, const KDL::Wrench& src, KDL::JntArray& dest);
 
