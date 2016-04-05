@@ -119,6 +119,7 @@ public:
   joint_position_prev_,
   joint_velocity_,
   joint_effort_,
+  joint_est_ext_trq_,
   joint_stiffness_,
   joint_damping_,
   joint_position_command_,
@@ -126,6 +127,7 @@ public:
   joint_stiffness_command_,
   joint_damping_command_,
   joint_effort_command_,
+  joint_dummy_,
   cart_pos_,
   cart_stiff_,
   cart_damp_,
@@ -133,7 +135,9 @@ public:
   cart_pos_command_,
   cart_stiff_command_,
   cart_damp_command_,
-  cart_wrench_command_;
+  cart_wrench_command_,
+  cart_6_dummy_,
+  cart_12_dummy_;
 
   // NOTE:
   // joint_velocity_command is not really to command the kuka arm in velocity,

@@ -44,6 +44,7 @@ namespace lwr_hw
     joint_position_prev_.resize(n_joints_);
     joint_velocity_.resize(n_joints_);
     joint_effort_.resize(n_joints_);
+    joint_est_ext_trq_.resize(n_joints_);
     joint_stiffness_.resize(n_joints_);
     joint_damping_.resize(n_joints_);
     joint_position_command_.resize(n_joints_);
@@ -51,6 +52,8 @@ namespace lwr_hw
     joint_effort_command_.resize(n_joints_);
     joint_stiffness_command_.resize(n_joints_);
     joint_damping_command_.resize(n_joints_);
+    joint_dummy_.resize(n_joints_);
+
     cart_pos_.resize(12);
     cart_stiff_.resize(6);
     cart_damp_.resize(6);
@@ -59,6 +62,8 @@ namespace lwr_hw
     cart_stiff_command_.resize(6);
     cart_damp_command_.resize(6);
     cart_wrench_command_.resize(6);
+    cart_6_dummy_.resize(6);
+    cart_12_dummy_.resize(12);
 
     joint_lower_limits_.resize(n_joints_);
     joint_upper_limits_.resize(n_joints_);
@@ -100,6 +105,7 @@ namespace lwr_hw
       joint_position_prev_[j] = 0.0;
       joint_velocity_[j] = 0.0;
       joint_effort_[j] = 0.0;
+      joint_est_ext_trq_[j] = 0.0;
       joint_stiffness_[j] = 0.0;
       joint_damping_[j] = 0.0;
 
@@ -108,12 +114,15 @@ namespace lwr_hw
       joint_effort_command_[j] = 0.0;
       joint_stiffness_command_[j] = 2500.0;
       joint_damping_command_[j] = 0.0;
+
+      joint_dummy_[j] = 0.0;
     }
 
     for(int i=0; i < 12; ++i)
     {
       cart_pos_[i] = 0.0;
       cart_pos_command_[i] = 0.0;
+      cart_12_dummy_[i] = 0.0;
     }
     cart_pos_[0] = 1.0;
     cart_pos_[5] = 1.0;
@@ -135,6 +144,8 @@ namespace lwr_hw
       cart_damp_command_[i + 3] = 1;
       cart_wrench_command_[i] = 0.0;
       cart_wrench_command_[i + 3] = 0.0;
+      cart_6_dummy_[i] = 0.0;
+      cart_6_dummy_[i + 3] = 0.0;
     }
 
     current_strategy_ = JOINT_POSITION;
@@ -192,6 +203,10 @@ namespace lwr_hw
       state_interface_.registerHandle(hardware_interface::JointStateHandle(
           joint_names_[j], &joint_position_[j], &joint_velocity_[j], &joint_effort_[j]));
 
+      // TE: Create joint state interface for the estimated external joint torque
+      state_interface_.registerHandle(hardware_interface::JointStateHandle(
+          joint_names_[j] + std::string("_estExtJntTrq"), &joint_dummy_[j], &joint_dummy_[j], &joint_est_ext_trq_[j]));
+
       // Decide what kind of command interface this actuator/joint has
 
       // TE: registering novel ImpedanceJointHandle
@@ -246,7 +261,7 @@ namespace lwr_hw
     for(int j=0; j < 12; ++j)
     {
       state_interface_.registerHandle(hardware_interface::JointStateHandle(
-          cart_12_names_[j], &cart_pos_[j], &cart_stiff_[j], &cart_damp_[j]));
+          cart_12_names_[j], &cart_pos_[j], &cart_12_dummy_[j], &cart_12_dummy_[j]));
       hardware_interface::JointHandle cart_pos_handle;
       cart_pos_handle = hardware_interface::JointHandle(state_interface_.getHandle(cart_12_names_[j]),
                                                        &cart_pos_command_[j]);
@@ -255,21 +270,21 @@ namespace lwr_hw
     for(int j=0; j < 6; ++j)
     {
       state_interface_.registerHandle(hardware_interface::JointStateHandle(
-          cart_6_names_[j]+ std::string("_stiffness"), &cart_stiff_[j], &cart_damp_[j], &cart_wrench_[j]));
+          cart_6_names_[j]+ std::string("_stiffness"), &cart_stiff_[j], &cart_6_dummy_[j], &cart_6_dummy_[j]));
       hardware_interface::JointHandle cart_stiff_handle;
       cart_stiff_handle = hardware_interface::JointHandle(state_interface_.getHandle(cart_6_names_[j] + std::string("_stiffness")),
                                                        &cart_stiff_command_[j]);
       position_cart_interface_.registerHandle(cart_stiff_handle);
 
       state_interface_.registerHandle(hardware_interface::JointStateHandle(
-          cart_6_names_[j]+ std::string("_damping"), &cart_stiff_[j], &cart_damp_[j], &cart_wrench_[j]));
+          cart_6_names_[j]+ std::string("_damping"), &cart_stiff_[j], &cart_6_dummy_[j], &cart_6_dummy_[j]));
       hardware_interface::JointHandle cart_damp_handle;
       cart_damp_handle = hardware_interface::JointHandle(state_interface_.getHandle(cart_6_names_[j] + std::string("_damping")),
                                                        &cart_damp_command_[j]);
       position_cart_interface_.registerHandle(cart_damp_handle);
 
       state_interface_.registerHandle(hardware_interface::JointStateHandle(
-          cart_6_names_[j]+ std::string("_wrench"), &cart_stiff_[j], &cart_damp_[j], &cart_wrench_[j]));
+          cart_6_names_[j]+ std::string("_wrench"), &cart_6_dummy_[j], &cart_6_dummy_[j], &cart_wrench_[j]));
       hardware_interface::JointHandle cart_wrench_handle;
       cart_wrench_handle = hardware_interface::JointHandle(state_interface_.getHandle(cart_6_names_[j] + std::string("_wrench")),
                                                        &cart_wrench_command_[j]);

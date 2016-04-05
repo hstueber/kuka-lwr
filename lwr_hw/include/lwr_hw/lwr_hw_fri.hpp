@@ -24,14 +24,26 @@ class LWRHWFRI : public LWRHW
 public:
 
   LWRHWFRI() : LWRHW() {}
-  ~LWRHWFRI() { stopKRCComm_ = true; KRCCommThread_.get()->join();}
+  ~LWRHWFRI()
+  {
+      stopKRCComm_ = true;
+      KRCCommThread_.get()->join();
+      std::cout << "KRC Comm. Thread exited successfully" << std::endl;
+  }
 
   void setPort(int port){port_ = port; port_set_ = true;}
   void setIP(std::string hintToRemoteHost){hintToRemoteHost_ = hintToRemoteHost; ip_set_ = true;}
   float getSampleTime(){return sampling_rate_;}
 
   // TE: call stopFRI() in case of SIGINT:
-  void callStopFRI() { stopFRI();}
+  void callStopFRI() {
+      stopFRI();
+      device_->setToKRLInt(0, JOINT_POSITION);
+      startFRI();
+      sleep(0.005);
+      stopFRI();
+      std::cout << "Going back to JOINT_POSITION" << std::endl;
+  }
 
   // Init, read, and write, with FRI hooks
   bool init()
@@ -78,6 +90,7 @@ public:
       joint_position_[j] = device_->getMsrMsrJntPosition()[j];
       joint_position_kdl_(j) = joint_position_[j];
       joint_effort_[j] = device_->getMsrJntTrq()[j];
+      joint_est_ext_trq_[j] = device_->getMsrEstExtJntTrq()[j];
       joint_velocity_[j] = filters::exponentialSmoothing((joint_position_[j]-joint_position_prev_[j])/period.toSec(), joint_velocity_[j], 0.2);
       joint_stiffness_[j] = joint_stiffness_command_[j];
     }
