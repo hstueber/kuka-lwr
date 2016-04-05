@@ -67,7 +67,7 @@ namespace lwr_controllers
 
         ros::ServiceServer srv_command_;
         ros::Subscriber sub_ft_measures_;
-        ros::Publisher pub_goal_;
+        //ros::Publisher pub_goal_;
         ros::Publisher pub_msr_pos_;
 
 		// Cartesian vars

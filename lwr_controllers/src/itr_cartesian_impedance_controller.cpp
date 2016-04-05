@@ -95,7 +95,7 @@ namespace lwr_controllers
 
         srv_command_ = n.advertiseService("set_command", &ITRCartesianImpedanceController::command_cb, this);
         //sub_ft_measures_ = n.subscribe(n.resolveName("ft_measures"), 1, &ITRCartesianImpedanceController::updateFT, this);
-        pub_goal_ = n.advertise<geometry_msgs::PoseStamped>(n.resolveName("goal"),0);
+        //pub_goal_ = n.advertise<geometry_msgs::PoseStamped>(n.resolveName("goal"),0);
 
         pub_msr_pos_ = n.advertise<geometry_msgs::PoseStamped>(n.resolveName("measured_cartesian_pose"),0);
 
