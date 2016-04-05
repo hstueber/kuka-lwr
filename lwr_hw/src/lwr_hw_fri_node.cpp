@@ -14,163 +14,199 @@
 #include "lwr_hw/lwr_hw_fri.hpp"
 
 bool g_quit = false;
+bool set_position_mode = false;
 lwr_hw::LWRHWFRI *lwr_robot_sigint_ptr = nullptr;
+controller_manager::ControllerManager *cm_sigint_ptr;
 
 void quitRequested(int sig)
 {
-  g_quit = true;
-  if (lwr_robot_sigint_ptr)
-      lwr_robot_sigint_ptr->callStopFRI();
+    g_quit = true;
+    std::cout << "Executing custom signal handler ..." << std::endl;
+//    if (lwr_robot_sigint_ptr) {
+//        lwr_robot_sigint_ptr->callStopFRI();
+//        sleep(3);
+//        //std::cout << "Stopped FRI" << std::endl;
+//        lwr_robot_sigint_ptr->~LWRHWFRI();
+//    }
+
+    // All the default sigint handler does is call shutdown()
+    //ros::shutdown();
+    //exit(EXIT_SUCCESS);
 }
 
 bool isStopPressed = false;
 bool wasStopHandled = true;
 void eStopCB(const std_msgs::BoolConstPtr& e_stop_msg)
 {
-  isStopPressed = e_stop_msg->data;
+    isStopPressed = e_stop_msg->data;
 }
 
 // Get the URDF XML from the parameter server
 std::string getURDF(ros::NodeHandle &model_nh_, std::string param_name)
 {
-  std::string urdf_string;
-  std::string robot_description = "/robot_description";
+    std::string urdf_string;
+    std::string robot_description = "/robot_description";
 
-  // search and wait for robot_description on param server
-  while (urdf_string.empty())
-  {
-    std::string search_param_name;
-    if (model_nh_.searchParam(param_name, search_param_name))
+    // search and wait for robot_description on param server
+    while (urdf_string.empty())
     {
-      ROS_INFO_ONCE_NAMED("LWRHWFRI", "LWRHWFRI node is waiting for model"
-        " URDF in parameter [%s] on the ROS param server.", search_param_name.c_str());
+        std::string search_param_name;
+        if (model_nh_.searchParam(param_name, search_param_name))
+        {
+            ROS_INFO_ONCE_NAMED("LWRHWFRI", "LWRHWFRI node is waiting for model"
+                                " URDF in parameter [%s] on the ROS param server.", search_param_name.c_str());
 
-      model_nh_.getParam(search_param_name, urdf_string);
+            model_nh_.getParam(search_param_name, urdf_string);
+        }
+        else
+        {
+            ROS_INFO_ONCE_NAMED("LWRHWFRI", "LWRHWFRI node is waiting for model"
+                                " URDF in parameter [%s] on the ROS param server.", robot_description.c_str());
+
+            model_nh_.getParam(param_name, urdf_string);
+        }
+
+        usleep(100000);
     }
-    else
-    {
-      ROS_INFO_ONCE_NAMED("LWRHWFRI", "LWRHWFRI node is waiting for model"
-        " URDF in parameter [%s] on the ROS param server.", robot_description.c_str());
+    ROS_DEBUG_STREAM_NAMED("LWRHWFRI", "Received URDF from param server, parsing...");
 
-      model_nh_.getParam(param_name, urdf_string);
-    }
+    return urdf_string;
+}
 
-    usleep(100000);
-  }
-  ROS_DEBUG_STREAM_NAMED("LWRHWFRI", "Received URDF from param server, parsing...");
+bool setPositionMode(controller_manager::ControllerManager &manager)
+{
+    std::cout << "Exiting... Trying to switch to JOINT_POSITION (STRATEGY 10)..." << std::endl;
 
-  return urdf_string;
+
+
+
+
+    std::vector<std::string> start_controllers;
+    start_controllers.push_back("cartesian_position");
+    std::vector<std::string> stop_controllers;
+    stop_controllers.push_back("itr_cartesian_impedance_controller");
+    stop_controllers.push_back("itr_joint_impedance_controller");
+
+    return manager.switchController(start_controllers, stop_controllers, 1);
 }
 
 int main( int argc, char** argv )
 {
-  // initialize ROS
-  ros::init(argc, argv, "lwr_hw_interface", ros::init_options::NoSigintHandler);
+    // initialize ROS
+    ros::init(argc, argv, "lwr_hw_interface", ros::init_options::NoSigintHandler);
 
-  // ros spinner
-  ros::AsyncSpinner spinner(1);
-  spinner.start();
+    // ros spinner
+    ros::AsyncSpinner spinner(1);
+    spinner.start();
 
-  // custom signal handlers
-  signal(SIGTERM, quitRequested);
-  signal(SIGINT, quitRequested);
-  signal(SIGHUP, quitRequested);
+    // custom signal handlers
+    signal(SIGTERM, quitRequested);
+    signal(SIGINT, quitRequested);
+    signal(SIGHUP, quitRequested);
 
-  // create a node
-  ros::NodeHandle lwr_nh;
+    // create a node
+    ros::NodeHandle lwr_nh;
 
-  // get params or give default values
-  int port;
-  std::string hintToRemoteHost;
-  std::string name;
-  lwr_nh.param("port", port, 49939);
-  lwr_nh.param("ip", hintToRemoteHost, std::string("192.168.0.10") );
-  lwr_nh.param("name", name, std::string("lwr"));
+    // get params or give default values
+    int port;
+    std::string hintToRemoteHost;
+    std::string name;
+    lwr_nh.param("port", port, 49939);
+    lwr_nh.param("ip", hintToRemoteHost, std::string("192.168.0.10") );
+    lwr_nh.param("name", name, std::string("lwr"));
 
-  // advertise the e-stop topic
-  ros::Subscriber estop_sub = lwr_nh.subscribe(lwr_nh.resolveName("emergency_stop"), 1, eStopCB);
+    // advertise the e-stop topic
+    ros::Subscriber estop_sub = lwr_nh.subscribe(lwr_nh.resolveName("emergency_stop"), 1, eStopCB);
 
-  // get the general robot description, the lwr class will take care of parsing what's useful to itself
-  std::string urdf_string = getURDF(lwr_nh, "/robot_description");
+    // get the general robot description, the lwr class will take care of parsing what's useful to itself
+    std::string urdf_string = getURDF(lwr_nh, "/robot_description");
 
-  // construct and start the real lwr
-  lwr_hw::LWRHWFRI lwr_robot;
-  lwr_robot_sigint_ptr = &lwr_robot;
-  lwr_robot.create(name, urdf_string);
-  lwr_robot.setPort(port);
-  lwr_robot.setIP(hintToRemoteHost);
+    // construct and start the real lwr
+    lwr_hw::LWRHWFRI lwr_robot;
+    lwr_robot_sigint_ptr = &lwr_robot;
+    lwr_robot.create(name, urdf_string);
+    lwr_robot.setPort(port);
+    lwr_robot.setIP(hintToRemoteHost);
 
-  if(!lwr_robot.init())
-  {
-    ROS_FATAL_NAMED("lwr_hw","Could not initialize robot real interface");
-    return -1;
-  }
-
-  // timer variables
-  struct timespec ts = {0, 0};
-  ros::Time last(ts.tv_sec, ts.tv_nsec), now(ts.tv_sec, ts.tv_nsec);
-  ros::Duration period(1.0);
-
-  float sampling_time = lwr_robot.getSampleTime();
-  ROS_INFO("Sampling time on robot: %f", sampling_time);
-
-  //the controller manager
-  controller_manager::ControllerManager manager(&lwr_robot, lwr_nh);
-
-  // run as fast as possible
-  while( !g_quit )
-  {
-    // get the time / period
-    if (!clock_gettime(CLOCK_REALTIME, &ts))
+    if(!lwr_robot.init())
     {
-      now.sec = ts.tv_sec;
-      now.nsec = ts.tv_nsec;
-      period = now - last;
-      last = now;
-    } 
-    else
-    {
-      ROS_FATAL("Failed to poll realtime clock!");
-      break;
+        ROS_FATAL_NAMED("lwr_hw","Could not initialize robot real interface");
+        return -1;
     }
 
-    // read the state from the lwr
-    lwr_robot.read(now, period);
+    // timer variables
+    struct timespec ts = {0, 0};
+    ros::Time last(ts.tv_sec, ts.tv_nsec), now(ts.tv_sec, ts.tv_nsec);
+    ros::Duration period(1.0);
 
-    // Compute the controller commands
-    bool resetControllers;
-    if(!wasStopHandled && !resetControllers)
+    float sampling_time = lwr_robot.getSampleTime();
+    ROS_INFO("Sampling time on robot: %f", sampling_time);
+
+    //the controller manager
+    controller_manager::ControllerManager manager(&lwr_robot, lwr_nh);
+
+    // run as fast as possible
+    while( !g_quit )
     {
-      ROS_WARN("E-STOP HAS BEEN PRESSED: Controllers will be restarted, but the robot won't move until you release the E-Stop");
-      ROS_WARN("HOW TO RELEASE E-STOP: rostopic pub -r 10 /NAMESPACE/emergency_stop std_msgs/Bool 'data: false'");
-      resetControllers = true;
-      wasStopHandled = true;
+        // get the time / period
+        if (!clock_gettime(CLOCK_REALTIME, &ts))
+        {
+            now.sec = ts.tv_sec;
+            now.nsec = ts.tv_nsec;
+            period = now - last;
+            last = now;
+        }
+        else
+        {
+            ROS_FATAL("Failed to poll realtime clock!");
+            break;
+        }
+
+        // read the state from the lwr
+        lwr_robot.read(now, period);
+
+        // Compute the controller commands
+        bool resetControllers;
+        if(!wasStopHandled && !resetControllers)
+        {
+            ROS_WARN("E-STOP HAS BEEN PRESSED: Controllers will be restarted, but the robot won't move until you release the E-Stop");
+            ROS_WARN("HOW TO RELEASE E-STOP: rostopic pub -r 10 /NAMESPACE/emergency_stop std_msgs/Bool 'data: false'");
+            resetControllers = true;
+            wasStopHandled = true;
+        }
+
+        if( isStopPressed )
+        {
+            wasStopHandled = false;
+        }
+        else
+        {
+            resetControllers = false;
+            wasStopHandled = true;
+        }
+
+        // update the controllers
+        manager.update(now, period, resetControllers);
+
+        // write the command to the lwr
+        lwr_robot.write(now, period);
     }
 
-    if( isStopPressed )
-    {
-      wasStopHandled = false;
-    }
-    else
-    {
-      resetControllers = false;
-      wasStopHandled = true;
-    }    
+    //setPositionMode(manager);
 
-    // update the controllers
-    manager.update(now, period, resetControllers);
+    lwr_robot.callStopFRI();
+    //sleep(3);
+    //std::cout << "Stopped FRI" << std::endl;
+    //lwr_robot.~LWRHWFRI();
 
-    // write the command to the lwr
-    lwr_robot.write(now, period);
-  }
 
-  std::cerr<<"Stopping spinner..."<<std::endl;
-  spinner.stop();
+    std::cerr<<"Stopping spinner..."<<std::endl;
+    spinner.stop();
 
-  //std::cerr<<"Stopping LWR..."<<std::endl;
-  //lwr_robot.stopFRI();
+    //std::cerr<<"Stopping LWR..."<<std::endl;
+    //lwr_robot.stopFRI();
 
-  std::cerr<<"Bye!"<<std::endl;
+    std::cerr<<"Bye!"<<std::endl;
 
-  return 0;
+    return 0;
 }
