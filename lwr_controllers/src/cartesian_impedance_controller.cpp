@@ -53,7 +53,7 @@ namespace lwr_controllers
         cart_6_names_.push_back( robot_namespace_ + std::string("_B") );
         cart_6_names_.push_back( robot_namespace_ + std::string("_C") );
 
-        // now get all handles, 12 for cart pos, 6 for stiff, 6 for damp, 6 for wrench, 6 for joints
+        // now get all handles, 12 for cart pos, 6 for stiff, 6 for damp, 6 for wrench, 7 for joints
         for(int c = 0; c < 30; ++c)
         {
             if(c < 12)
@@ -65,7 +65,7 @@ namespace lwr_controllers
             if(c > 23 && c < 30)
                 cart_handles_.push_back(robot->getHandle(cart_6_names_.at(c-24) + std::string("_wrench")));
         }
-        for(int j = 0; j < 6; ++j)
+        for(int j = 0; j < 7; ++j)
         {
             joint_handles_.push_back(robot->getHandle(joint_names_.at(j)));
         }
