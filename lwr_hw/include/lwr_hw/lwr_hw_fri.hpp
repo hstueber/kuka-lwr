@@ -102,7 +102,8 @@ public:
     {
         cart_stiff_[j] = cart_stiff_command_[j];
         cart_damp_[j] = cart_damp_command_[j];
-        cart_wrench_[j] = cart_wrench_command_[j];
+        //cart_wrench_[j] = cart_wrench_command_[j];
+        cart_wrench_[j] = device_->getMsrBuf().data.estExtTcpFT[j];
     }
     return;
   }

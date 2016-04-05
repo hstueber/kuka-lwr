@@ -72,7 +72,7 @@ target_link_libraries(${PROJECT_NAME}
 # KUKA FRI library
 add_library(friremote
   src/fri/friremote.cpp
-  src//fri/friudp.cpp
+  src/fri/friudp.cpp
 )
 # lwr hw fri node
 add_executable(lwr_hw_fri_node  src/lwr_hw_fri_node.cpp

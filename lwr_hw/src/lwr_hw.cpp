@@ -284,11 +284,15 @@ namespace lwr_hw
       position_cart_interface_.registerHandle(cart_damp_handle);
 
       state_interface_.registerHandle(hardware_interface::JointStateHandle(
-          cart_6_names_[j]+ std::string("_wrench"), &cart_6_dummy_[j], &cart_6_dummy_[j], &cart_wrench_[j]));
+          cart_6_names_[j]+ std::string("_wrench"), &cart_6_dummy_[j], &cart_6_dummy_[j], &cart_wrench_command_[j]));
       hardware_interface::JointHandle cart_wrench_handle;
       cart_wrench_handle = hardware_interface::JointHandle(state_interface_.getHandle(cart_6_names_[j] + std::string("_wrench")),
                                                        &cart_wrench_command_[j]);
       position_cart_interface_.registerHandle(cart_wrench_handle);
+
+      // TE: registering estExtTcpFT in joint_state_interface
+      state_interface_.registerHandle(hardware_interface::JointStateHandle(
+          cart_6_names_[j]+ std::string("_estExtTcpFT"), &cart_6_dummy_[j], &cart_6_dummy_[j], &cart_wrench_[j]));
     }
 
     // Register interfaces
