@@ -5,8 +5,7 @@
 #include <lwr_controllers/lwr_state_controller.h>
 #include <kdl/frames_io.hpp>
 
-
-#define TEOUT(x) std::cout << x << std::endl;
+//#define TEOUT(x) std::cout << x << std::endl;
 
 namespace lwr_controllers {
 
@@ -16,7 +15,6 @@ LWRStateController::~LWRStateController() {}
 
 bool LWRStateController::init(hardware_interface::JointStateInterface *robot, ros::NodeHandle &n)
 {
-    //TEOUT("init start");
     if (!ros::param::search(n.getNamespace(),"robot_name", robot_namespace_))
     {
         ROS_WARN_STREAM("LWRStateController: No robot name found on parameter server ("<<n.getNamespace()<<"/robot_name), using the namespace...");
@@ -121,20 +119,16 @@ bool LWRStateController::init(hardware_interface::JointStateInterface *robot, ro
     pub_msr_cart_pos_ = n.advertise<geometry_msgs::PoseStamped>(n.resolveName("msr_cart_pose"),0);
     pub_msr_cart_pos_base_link_ = n.advertise<geometry_msgs::PoseStamped>(n.resolveName("msr_cart_pose_base_link"),0);
 
-    //TEOUT("init end");
-
     return true;
 }
 
 void LWRStateController::starting(const ros::Time& time)
 {
-    //TEOUT("starting");
+
 }
 
 void LWRStateController::update(const ros::Time& time, const ros::Duration& period)
 {
-    //TEOUT("update start");
-
     // get msr cart position
     KDL::Rotation cur_R(cart_state_handles_.at(0).getPosition(),
                         cart_state_handles_.at(1).getPosition(),
@@ -182,7 +176,7 @@ void LWRStateController::update(const ros::Time& time, const ros::Duration& peri
 
     // publish estimated external Wrench on TCP
     ext_wrench_msg_.header.stamp = time;
-    ext_wrench_msg_.header.frame_id = frame_id_lwr_base_link_;
+    ext_wrench_msg_.header.frame_id = frame_id_tip_link_;
     tf::wrenchKDLToMsg(estExtTcpFT_, ext_wrench_msg_.wrench);
     pub_msr_cart_wrench_.publish(ext_wrench_msg_);
 
@@ -196,7 +190,6 @@ void LWRStateController::update(const ros::Time& time, const ros::Duration& peri
     pub_msr_joint_state_.publish(joint_state_msg_);
 
     sleep(1/publish_rate_);   // this defines roughly the update rate...
-    //TEOUT("update end");
 }
 
 void LWRStateController::fromFRItoKDL(const std::vector<double>& in, KDL::Frame& out)
