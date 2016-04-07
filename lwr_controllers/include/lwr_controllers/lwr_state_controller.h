@@ -40,7 +40,7 @@ namespace lwr_controllers
 
         std::vector<hardware_interface::JointStateHandle>
             joint_state_handles_,
-            joint_state_handles_estExtTrq_,
+            joint_state_handles_estExtJntTrq_,
             cart_state_handles_;
 
         // ROS API (topic, service and dynamic reconfigure)

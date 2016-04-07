@@ -86,35 +86,37 @@ bool LWRStateController::init(hardware_interface::JointStateInterface *robot, ro
     cart_6_names_.push_back( robot_namespace_ + std::string("_B") );
     cart_6_names_.push_back( robot_namespace_ + std::string("_C") );
 
-    // now get all handles: estExtTcpFT, estExtJntTrq,
+    // now get handles: estExtTcpFT, estExtJntTrq,
     for(int c = 0; c < 18; ++c)
     {
         if(c < 12)
             cart_state_handles_.push_back(robot->getHandle(cart_12_names_.at(c)));
         if(c > 11 && c < 18)
             cart_state_handles_.push_back(robot->getHandle(cart_6_names_.at(c-12) + std::string("_estExtTcpFT")));
-        /*
-        if(c > 17 && c < 24)
-            cart_state_handles_.push_back(robot->getHandle(cart_6_names_.at(c-18) + std::string("_damping")));
-        if(c > 23 && c < 30)
-            cart_state_handles_.push_back(robot->getHandle(cart_6_names_.at(c-24) + std::string("_wrench")));
-        */
     }
     for(int j = 0; j < 7; ++j)
     {
         joint_state_handles_.push_back(robot->getHandle(joint_names_.at(j)));
-        joint_state_handles_estExtTrq_.push_back(robot->getHandle(joint_names_.at(j) + std::string("_estExtJntTrq")));
+        joint_state_handles_estExtJntTrq_.push_back(robot->getHandle(joint_names_.at(j) + std::string("_estExtJntTrq")));
     }
 
+    // init joint state message
+    joint_state_msg_.name.resize(joint_state_handles_.size());
+    joint_state_msg_.name = joint_names_;
     joint_state_msg_.position.resize(joint_state_handles_.size());
     joint_state_msg_.velocity.resize(joint_state_handles_.size());
-    joint_state_msg_.effort.resize(joint_state_handles_estExtTrq_.size());
-    std::cout << joint_state_handles_.size() << ", " << joint_state_handles_estExtTrq_.size() << std::endl;
+    joint_state_msg_.effort.resize(joint_state_handles_estExtJntTrq_.size());
 
     // init estimated external Wrench
     estExtTcpFT_ = KDL::Wrench (KDL::Vector(0.0, 0.0, 0.0), KDL::Vector(0.0, 0.0, 0.0));
 
-    pub_msr_joint_state_ = n.advertise<sensor_msgs::JointState>(n.resolveName("msr_joint_state"),0);
+    // set frame_id for each message
+    pose_msg_.header.frame_id = frame_id_lwr_base_link_;
+    pose_base_link_msg_.header.frame_id = frame_id_base_link_;
+    ext_wrench_msg_.header.frame_id = frame_id_tip_link_;
+
+    // create publishers
+    pub_msr_joint_state_ = n.advertise<sensor_msgs::JointState>(n.resolveName("msr_joint_states"),0);
     pub_msr_cart_wrench_ = n.advertise<geometry_msgs::WrenchStamped>(n.resolveName("msr_cart_wrench"),0);
     pub_msr_cart_pos_ = n.advertise<geometry_msgs::PoseStamped>(n.resolveName("msr_cart_pose"),0);
     pub_msr_cart_pos_base_link_ = n.advertise<geometry_msgs::PoseStamped>(n.resolveName("msr_cart_pose_base_link"),0);
@@ -148,18 +150,14 @@ void LWRStateController::update(const ros::Time& time, const ros::Duration& peri
     // get msr estimated external Wrench
     for (int i=0; i<6; i++) {
         estExtTcpFT_(i) = cart_state_handles_.at(i + 12).getEffort();
-        //std::cout << cart_state_handles_.at(i+12).getName() << ", ";
-        //std::cout << cart_state_handles_.at(i+12).getEffort() << std::endl;
     }
-    //std::cout << std::endl;
 
     // publish measured cartesian pose
     pose_msg_.header.stamp = time;
-    pose_msg_.header.frame_id = frame_id_lwr_base_link_;    // TODO generalize frame name to left/right robot
     tf::poseKDLToMsg(x_msr_, pose_msg_.pose);
     pub_msr_cart_pos_.publish(pose_msg_);
 
-    // publish measured cartesian pose (in base_link coordinate system)
+    // publish measured cartesian pose (now in base_link coordinate system)
 
     // Transformation from base_link KS into robot KS:
     // Orientation robot -> world
@@ -170,13 +168,11 @@ void LWRStateController::update(const ros::Time& time, const ros::Duration& peri
     x_msr_base_link_.p = x_msr_base_link_.p + base_link2robot_.p;
 
     pose_base_link_msg_.header.stamp = time;
-    pose_base_link_msg_.header.frame_id = frame_id_base_link_;
     tf::poseKDLToMsg(x_msr_base_link_, pose_base_link_msg_.pose);
     pub_msr_cart_pos_base_link_.publish(pose_base_link_msg_);
 
     // publish estimated external Wrench on TCP
     ext_wrench_msg_.header.stamp = time;
-    ext_wrench_msg_.header.frame_id = frame_id_tip_link_;
     tf::wrenchKDLToMsg(estExtTcpFT_, ext_wrench_msg_.wrench);
     pub_msr_cart_wrench_.publish(ext_wrench_msg_);
 
@@ -184,12 +180,13 @@ void LWRStateController::update(const ros::Time& time, const ros::Duration& peri
     for (int j=0; j<joint_state_handles_.size(); j++) {
         joint_state_msg_.position.at(j) = joint_state_handles_.at(j).getPosition();
         joint_state_msg_.velocity.at(j) = joint_state_handles_.at(j).getVelocity();
-        joint_state_msg_.effort.at(j) = joint_state_handles_estExtTrq_.at(j).getEffort();
+        joint_state_msg_.effort.at(j) = joint_state_handles_estExtJntTrq_.at(j).getEffort();
     }
     joint_state_msg_.header.stamp = time;
     pub_msr_joint_state_.publish(joint_state_msg_);
 
-    sleep(1/publish_rate_);   // this defines roughly the update rate...
+    // this defines roughly the update rate...
+    usleep(1000000/publish_rate_);
 }
 
 void LWRStateController::fromFRItoKDL(const std::vector<double>& in, KDL::Frame& out)
