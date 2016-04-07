@@ -50,7 +50,7 @@ namespace lwr_controllers
         void additionalFT(const geometry_msgs::WrenchStamped::ConstPtr &msg);
         void gains(const std_msgs::Float64MultiArrayConstPtr &msg);
 
-        // experimental set a world pose, which is then transformed into the robot KS
+        // set a world pose, which is then transformed into the robot KS
         void pose_base_link(const geometry_msgs::PoseConstPtr &msg);
 
     protected:

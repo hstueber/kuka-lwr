@@ -13,9 +13,12 @@
 #include <kdl/stiffness.hpp>
 #include <kdl_conversions/kdl_msg.h>
 
+// Base class with useful URDF parsing and kdl chain generator
+#include "lwr_controllers/KinematicChainControllerBase.h"
+
 namespace lwr_controllers
 {
-    class LWRStateController: public controller_interface::Controller<hardware_interface::JointStateInterface>
+    class LWRStateController: public controller_interface::KinematicChainControllerBase<hardware_interface::JointStateInterface>
 	{
 	public:
 
@@ -41,17 +44,18 @@ namespace lwr_controllers
             cart_state_handles_;
 
         // ROS API (topic, service and dynamic reconfigure)
-        ros::Publisher pub_msr_joint_state_;
-        ros::Publisher pub_msr_cart_wrench_;
-        ros::Publisher pub_msr_cart_pos_;
+        ros::Publisher
+            pub_msr_joint_state_,
+            pub_msr_cart_wrench_,
+            pub_msr_cart_pos_,
+            pub_msr_cart_pos_base_link_;
 
         sensor_msgs::JointState joint_state_msg_;
-        geometry_msgs::PoseStamped pose_msg_;
-        geometry_msgs::PoseStamped pose_base_link_msg_;
+        geometry_msgs::PoseStamped pose_msg_, pose_base_link_msg_;
         geometry_msgs::WrenchStamped ext_wrench_msg_;
 
         // Cartesian vars
-        KDL::Frame x_msr_;
+        KDL::Frame x_msr_, x_msr_base_link_;
         KDL::Frame x_FRI_;
         KDL::Wrench estExtTcpFT_;
 
@@ -59,6 +63,9 @@ namespace lwr_controllers
         void fromFRItoKDL(const std::vector<double>& in, KDL::Frame& out);
         void fromFRItoKDL(const std::vector<double>& in, KDL::Stiffness& out);
         void fromFRItoKDL(const std::vector<double>& in, KDL::Wrench& out);
+
+        // transform of the robot mounting position
+        KDL::Frame base_link2robot_;
 
 	};
 

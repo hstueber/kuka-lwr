@@ -4,6 +4,8 @@
 
 #include <lwr_controllers/lwr_state_controller.h>
 
+
+
 #define TEOUT(x) std::cout << x << std::endl;
 
 namespace lwr_controllers {
@@ -27,6 +29,19 @@ bool LWRStateController::init(hardware_interface::JointStateInterface *robot, ro
         robot_namespace_ = n.getNamespace();
         //return false;
     }
+
+    // stuff to read KDL chain in order to get the transform between base_link and robot
+    if( !(KinematicChainControllerBase<hardware_interface::JointStateInterface >::init(robot, n)) )
+    {
+        ROS_ERROR("Couldn't execute init of the KinematikChainController to get the KDL chain.");
+        return false;
+    }
+    KDL::Chain mount_chain;
+    cout << "reading segment 0 name:" << endl;
+    kdl_tree_.getChain(kdl_tree_.getRootSegment()->first, this->robot_namespace_ + "_base_link", mount_chain);
+    cout << "KDL segment 0 name: " << mount_chain.getSegment(0).getName() << endl;
+    base_link2robot_ = mount_chain.getSegment(0).getFrameToTip();
+    cout << "base_link2robot transform: " << endl << base_link2robot_ << endl;
 
     joint_names_.push_back( robot_namespace_ + std::string("_0_joint") );
     joint_names_.push_back( robot_namespace_ + std::string("_1_joint") );
@@ -85,7 +100,7 @@ bool LWRStateController::init(hardware_interface::JointStateInterface *robot, ro
     pub_msr_joint_state_ = n.advertise<sensor_msgs::JointState>(n.resolveName("msr_joint_state"),0);
     pub_msr_cart_wrench_ = n.advertise<geometry_msgs::WrenchStamped>(n.resolveName("msr_cart_wrench"),0);
     pub_msr_cart_pos_ = n.advertise<geometry_msgs::PoseStamped>(n.resolveName("msr_cart_pose"),0);
-    //pub_msr_cart_pos_base_link_ = n.advertise<geometry_msgs::PoseStamped>(n.resolveName("msr_cart_pose_base_link"),0);
+    pub_msr_cart_pos_base_link_ = n.advertise<geometry_msgs::PoseStamped>(n.resolveName("msr_cart_pose_base_link"),0);
 
     //TEOUT("init end");
 
@@ -135,6 +150,21 @@ void LWRStateController::update(const ros::Time& time, const ros::Duration& peri
     tf::poseKDLToMsg(x_msr_, pose_msg_.pose);
     pub_msr_cart_pos_.publish(pose_msg_);
 
+    // publish measured cartesian pose (in base_link coordinate system)
+
+    // Transformation from base_link KS into robot KS:
+    // Translation robot -> world
+    x_msr_base_link_.p = x_msr_.p + base_link2robot_.p;
+    // Rotation from robot -> world
+    x_msr_base_link_.p = base_link2robot_.M * x_msr_base_link_.p;
+    // Orientation robot -> world
+    x_msr_base_link_.M = base_link2robot_.M * x_msr_.M;
+
+    pose_base_link_msg_.header.stamp = time;
+    pose_base_link_msg_.header.frame_id = "base_link";
+    tf::poseKDLToMsg(x_msr_base_link_, pose_base_link_msg_.pose);
+    pub_msr_cart_pos_base_link_.publish(pose_base_link_msg_);
+
     // publish estimated external Wrench on TCP
     ext_wrench_msg_.header.stamp = time;
     ext_wrench_msg_.header.frame_id = frame_id;
@@ -147,6 +177,7 @@ void LWRStateController::update(const ros::Time& time, const ros::Duration& peri
         joint_state_msg_.velocity.at(j) = joint_state_handles_.at(j).getVelocity();
         joint_state_msg_.effort.at(j) = joint_state_handles_estExtTrq_.at(j).getEffort();
     }
+    joint_state_msg_.header.stamp = time;
     pub_msr_joint_state_.publish(joint_state_msg_);
 
     //TEOUT("update end");
