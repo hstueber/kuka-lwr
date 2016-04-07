@@ -1,5 +1,12 @@
 <library path="lib/liblwr_controllers">
 
+  <class name="lwr_controllers/lwr_state_controller" type="lwr_controllers::LWRStateController" base_class_type="controller_interface::ControllerBase">
+    <description>
+        TUM-ITR:
+	dummy controller, publishes joint states with estimated external joint torque, measured cartesian position and estimated external end effector Wrench.
+    </description>
+  </class>
+
   <class name="lwr_controllers/CartesianPosition" type="lwr_controllers::CartesianPosition" base_class_type="controller_interface::ControllerBase">
     <description>
       	TUM-ITR:

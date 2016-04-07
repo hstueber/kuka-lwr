@@ -4,6 +4,8 @@
 
 #include <lwr_controllers/lwr_state_controller.h>
 
+#define TEOUT(x) std::cout << x << std::endl;
+
 namespace lwr_controllers {
 
 LWRStateController::LWRStateController() {}
@@ -12,6 +14,7 @@ LWRStateController::~LWRStateController() {}
 
 bool LWRStateController::init(hardware_interface::JointStateInterface *robot, ros::NodeHandle &n)
 {
+    //TEOUT("init start");
     if (!ros::param::search(n.getNamespace(),"robot_name", robot_namespace_))
     {
         ROS_WARN_STREAM("LWRStateController: No robot name found on parameter server ("<<n.getNamespace()<<"/robot_name), using the namespace...");
@@ -67,46 +70,38 @@ bool LWRStateController::init(hardware_interface::JointStateInterface *robot, ro
     }
     for(int j = 0; j < 7; ++j)
     {
-        joint_state_handles_.push_back(robot->getHandle(joint_names_.at(j) + std::string("_estExtJntTrq")));
+        joint_state_handles_.push_back(robot->getHandle(joint_names_.at(j)));
+        joint_state_handles_estExtTrq_.push_back(robot->getHandle(joint_names_.at(j) + std::string("_estExtJntTrq")));
     }
+
+    joint_state_msg_.position.resize(joint_state_handles_.size());
+    joint_state_msg_.velocity.resize(joint_state_handles_.size());
+    joint_state_msg_.effort.resize(joint_state_handles_estExtTrq_.size());
+    std::cout << joint_state_handles_.size() << ", " << joint_state_handles_estExtTrq_.size() << std::endl;
+
+    // init estimated external Wrench
+    estExtTcpFT_ = KDL::Wrench (KDL::Vector(0.0, 0.0, 0.0), KDL::Vector(0.0, 0.0, 0.0));
 
     pub_msr_joint_state_ = n.advertise<sensor_msgs::JointState>(n.resolveName("msr_joint_state"),0);
     pub_msr_cart_wrench_ = n.advertise<geometry_msgs::WrenchStamped>(n.resolveName("msr_cart_wrench"),0);
     pub_msr_cart_pos_ = n.advertise<geometry_msgs::PoseStamped>(n.resolveName("msr_cart_pose"),0);
     //pub_msr_cart_pos_base_link_ = n.advertise<geometry_msgs::PoseStamped>(n.resolveName("msr_cart_pose_base_link"),0);
 
-    // Initial position
-    KDL::Rotation cur_R(cart_state_handles_.at(0).getPosition(),
-                        cart_state_handles_.at(1).getPosition(),
-                        cart_state_handles_.at(2).getPosition(),
-                        cart_state_handles_.at(4).getPosition(),
-                        cart_state_handles_.at(5).getPosition(),
-                        cart_state_handles_.at(6).getPosition(),
-                        cart_state_handles_.at(8).getPosition(),
-                        cart_state_handles_.at(9).getPosition(),
-                        cart_state_handles_.at(10).getPosition());
-    KDL::Vector cur_p(cart_state_handles_.at(3).getPosition(),
-                        cart_state_handles_.at(7).getPosition(),
-                        cart_state_handles_.at(11).getPosition());
-    KDL::Frame cur_T( cur_R, cur_p );
-    x_msr_ = cur_T;
-
-    // Initial force/torque measure
-
-    estExtTcpFT_ = KDL::Wrench (KDL::Vector(0.0, 0.0, 0.0), KDL::Vector(0.0, 0.0, 0.0));
+    //TEOUT("init end");
 
     return true;
 }
 
 void LWRStateController::starting(const ros::Time& time)
 {
-
+    //TEOUT("starting");
 }
 
 void LWRStateController::update(const ros::Time& time, const ros::Duration& period)
 {
-    // get current values
-    //std::cout << "Update current values" << std::endl;
+    //TEOUT("update start");
+
+    // get msr cart position
     KDL::Rotation cur_R(cart_state_handles_.at(0).getPosition(),
                         cart_state_handles_.at(1).getPosition(),
                         cart_state_handles_.at(2).getPosition(),
@@ -121,6 +116,15 @@ void LWRStateController::update(const ros::Time& time, const ros::Duration& peri
                         cart_state_handles_.at(11).getPosition());
     KDL::Frame cur_T( cur_R, cur_p );
     x_msr_ = cur_T;
+
+    // get msr estimated external Wrench
+    for (int i=0; i<6; i++) {
+        estExtTcpFT_(i) = cart_state_handles_.at(i + 12).getEffort();
+        //std::cout << cart_state_handles_.at(i+12).getName() << ", ";
+        //std::cout << cart_state_handles_.at(i+12).getEffort() << std::endl;
+    }
+    //std::cout << std::endl;
+
 
     // Prepare to publish everything...
     std::string frame_id = "lwr_right_base_link";
@@ -141,9 +145,11 @@ void LWRStateController::update(const ros::Time& time, const ros::Duration& peri
     for (int j=0; j<joint_state_handles_.size(); j++) {
         joint_state_msg_.position.at(j) = joint_state_handles_.at(j).getPosition();
         joint_state_msg_.velocity.at(j) = joint_state_handles_.at(j).getVelocity();
-        joint_state_msg_.effort.at(j) = joint_state_handles_.at(j).getEffort();
+        joint_state_msg_.effort.at(j) = joint_state_handles_estExtTrq_.at(j).getEffort();
     }
     pub_msr_joint_state_.publish(joint_state_msg_);
+
+    //TEOUT("update end");
 }
 
 void LWRStateController::fromFRItoKDL(const std::vector<double>& in, KDL::Frame& out)

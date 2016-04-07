@@ -30,10 +30,15 @@ namespace lwr_controllers
 
 	private:
         std::string robot_namespace_;
-        std::vector<std::string> joint_names_, cart_12_names_, cart_6_names_;
-        std::vector<hardware_interface::JointStateHandle> joint_state_handles_, cart_state_handles_;
+        std::vector<std::string>
+            joint_names_,
+            cart_12_names_,
+            cart_6_names_;
 
-
+        std::vector<hardware_interface::JointStateHandle>
+            joint_state_handles_,
+            joint_state_handles_estExtTrq_,
+            cart_state_handles_;
 
         // ROS API (topic, service and dynamic reconfigure)
         ros::Publisher pub_msr_joint_state_;
