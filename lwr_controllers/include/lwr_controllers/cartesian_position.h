@@ -35,7 +35,7 @@ namespace lwr_controllers
         void command(const lwr_controllers::PoseRPY::ConstPtr &msg);
 
 	private:
-		ros::Subscriber sub_command_;
+        ros::Subscriber sub_pose_, sub_pose_base_link_;
 		ros::Subscriber sub_gains_;
 
 		KDL::Frame x_;		//current pose

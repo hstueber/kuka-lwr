@@ -76,8 +76,8 @@ bool CartesianPosition::init(hardware_interface::PositionJointInterface *robot, 
     v_des_ = KDL::Twist(KDL::Vector(0,0,0),KDL::Vector(0,0,0)) ;
     cmd_flag_ = 0;
 
-    sub_command_ = nh_.subscribe("pose", 1, &CartesianPosition::pose, this);
-    sub_command_ = nh_.subscribe("pose_base_link", 1, &CartesianPosition::pose_base_link, this);
+    sub_pose_ = nh_.subscribe("pose", 1, &CartesianPosition::pose, this);
+    sub_pose_base_link_ = nh_.subscribe("pose_base_link", 1, &CartesianPosition::pose_base_link, this);
     //sub_command_ = nh_.subscribe("command", 1, &CartesianPosition::command, this);
 
     return true;
