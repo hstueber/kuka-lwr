@@ -3,7 +3,7 @@
 #include <algorithm>
 
 #include <lwr_controllers/lwr_state_controller.h>
-
+#include <kdl/frames_io.hpp>
 
 
 #define TEOUT(x) std::cout << x << std::endl;
@@ -36,12 +36,31 @@ bool LWRStateController::init(hardware_interface::JointStateInterface *robot, ro
         ROS_ERROR("Couldn't execute init of the KinematikChainController to get the KDL chain.");
         return false;
     }
+
     KDL::Chain mount_chain;
-    cout << "reading segment 0 name:" << endl;
+    //std::cout << "reading segment 0 name:" << std::endl;
     kdl_tree_.getChain(kdl_tree_.getRootSegment()->first, this->robot_namespace_ + "_base_link", mount_chain);
-    cout << "KDL segment 0 name: " << mount_chain.getSegment(0).getName() << endl;
+    //std::cout << "KDL segment 0 name: " << mount_chain.getSegment(0).getName() << std::endl;
     base_link2robot_ = mount_chain.getSegment(0).getFrameToTip();
-    cout << "base_link2robot transform: " << endl << base_link2robot_ << endl;
+    //std::cout << "base_link2robot transform: " << std::endl << base_link2robot_ << std::endl;
+
+
+    // get params for link names
+    if ( !nh_.getParam("base_link_name", frame_id_base_link_) ){
+        ROS_ERROR("base_link_name not set in yaml file.");
+    }
+    if ( !nh_.getParam("root_name", frame_id_lwr_base_link_) ){
+        ROS_ERROR("root_name not set in yaml file");
+    }
+    if ( !nh_.getParam("tip_name", frame_id_tip_link_) ){
+        ROS_ERROR("tip_name not set in yaml file");
+    }
+
+    // get param for publish rate
+    publish_rate_ = 500.0; //hz
+    if ( !nh_.getParam("publish_rate", publish_rate_) ){
+        ROS_ERROR("publish_rate not set in yaml file, using %f", publish_rate_);
+    }
 
     joint_names_.push_back( robot_namespace_ + std::string("_0_joint") );
     joint_names_.push_back( robot_namespace_ + std::string("_1_joint") );
@@ -140,34 +159,30 @@ void LWRStateController::update(const ros::Time& time, const ros::Duration& peri
     }
     //std::cout << std::endl;
 
-
-    // Prepare to publish everything...
-    std::string frame_id = "lwr_right_base_link";
-
     // publish measured cartesian pose
     pose_msg_.header.stamp = time;
-    pose_msg_.header.frame_id = frame_id;    // TODO generalize frame name to left/right robot
+    pose_msg_.header.frame_id = frame_id_lwr_base_link_;    // TODO generalize frame name to left/right robot
     tf::poseKDLToMsg(x_msr_, pose_msg_.pose);
     pub_msr_cart_pos_.publish(pose_msg_);
 
     // publish measured cartesian pose (in base_link coordinate system)
 
     // Transformation from base_link KS into robot KS:
-    // Translation robot -> world
-    x_msr_base_link_.p = x_msr_.p + base_link2robot_.p;
-    // Rotation from robot -> world
-    x_msr_base_link_.p = base_link2robot_.M * x_msr_base_link_.p;
     // Orientation robot -> world
     x_msr_base_link_.M = base_link2robot_.M * x_msr_.M;
+    // Rotation from robot -> world
+    x_msr_base_link_.p = base_link2robot_.M * x_msr_.p;
+    // Translation robot -> world
+    x_msr_base_link_.p = x_msr_base_link_.p + base_link2robot_.p;
 
     pose_base_link_msg_.header.stamp = time;
-    pose_base_link_msg_.header.frame_id = "base_link";
+    pose_base_link_msg_.header.frame_id = frame_id_base_link_;
     tf::poseKDLToMsg(x_msr_base_link_, pose_base_link_msg_.pose);
     pub_msr_cart_pos_base_link_.publish(pose_base_link_msg_);
 
     // publish estimated external Wrench on TCP
     ext_wrench_msg_.header.stamp = time;
-    ext_wrench_msg_.header.frame_id = frame_id;
+    ext_wrench_msg_.header.frame_id = frame_id_lwr_base_link_;
     tf::wrenchKDLToMsg(estExtTcpFT_, ext_wrench_msg_.wrench);
     pub_msr_cart_wrench_.publish(ext_wrench_msg_);
 
@@ -180,6 +195,7 @@ void LWRStateController::update(const ros::Time& time, const ros::Duration& peri
     joint_state_msg_.header.stamp = time;
     pub_msr_joint_state_.publish(joint_state_msg_);
 
+    sleep(1/publish_rate_);   // this defines roughly the update rate...
     //TEOUT("update end");
 }
 

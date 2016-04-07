@@ -67,6 +67,14 @@ namespace lwr_controllers
         // transform of the robot mounting position
         KDL::Frame base_link2robot_;
 
+        // link names to identify frame_id
+        std::string frame_id_lwr_base_link_;
+        std::string frame_id_base_link_;
+        std::string frame_id_tip_link_;
+
+        // param to set publish rate
+        double publish_rate_;
+
 	};
 
 } // namespace
