@@ -342,7 +342,7 @@ namespace lwr_controllers
             if(c > 17 && c < 24)
                 cart_handles_.at(c).setCommand(d_des_[c-18]);
             if(c > 23 && c < 30)
-                cart_handles_.at(c).setCommand(f_des_[c-24]);
+                cart_handles_.at(c).setCommand(f_cur_[c-24]);
         }
 
         x_prev_ = x_set_;
